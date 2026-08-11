@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { 
   ArrowLeft,
   Star, 
@@ -9,14 +10,15 @@ import {
   Mail,
   CheckCircle,
   Shield,
- 
   ChevronRight
 } from 'lucide-react';
+import { BookingModal, BookingFormData } from './BookingModal';
 
 const RentalDetail = () => {
   const navigate = useNavigate();
   const [selectedDays, setSelectedDays] = useState(3);
   const [includeOperator, setIncludeOperator] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const equipment = {
     id: 1,
@@ -52,6 +54,17 @@ const RentalDetail = () => {
       phone: '+91 98765 43210',
       email: 'info@mumbairentals.com',
     },
+  };
+
+  const handleBookingSubmit = (data: BookingFormData) => {
+    console.log('Booking request submitted:', {
+      equipmentId: equipment.id,
+      selectedDays,
+      includeOperator,
+      totalAmount: equipment.pricePerDay * selectedDays + (includeOperator ? 1500 * selectedDays : 0),
+      ...data,
+    });
+    toast.success('Consultation request sent successfully!');
   };
 
   return (
@@ -226,7 +239,11 @@ const RentalDetail = () => {
                 </div>
               </div>
 
-              <button className="w-full bg-secondary-500 text-white py-3 rounded-lg font-semibold hover:bg-secondary-600 transition-colors mb-3">
+              {/* Book Now Trigger Button */}
+              <button
+                onClick={() => setIsModalOpen(true)}
+                className="w-full bg-secondary-500 text-white py-3 rounded-lg font-semibold hover:bg-secondary-600 transition-colors mb-3"
+              >
                 Book Now
               </button>
               <button className="w-full border border-secondary-500 text-secondary-500 py-3 rounded-lg font-semibold hover:bg-primary-50 transition-colors">
@@ -293,6 +310,13 @@ const RentalDetail = () => {
           </motion.div>
         </div>
       </div>
+
+      {/* Booking Popup Modal */}
+      <BookingModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleBookingSubmit}
+      />
     </div>
   );
 };

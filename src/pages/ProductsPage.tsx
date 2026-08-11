@@ -189,7 +189,12 @@ const ProductCard = ({
         <div className="mt-2"><span className="text-xl font-bold text-secondary-500">₹{product.price.toLocaleString()}</span><span className="text-sm text-gray-500 ml-1">+ ₹{product.deliveryCharge} delivery</span></div>
         <div className="flex items-center gap-1 text-xs text-gray-500 mt-1"><MapPin className="w-3 h-3" />{product.location} | <Truck className="w-3 h-3" />{product.deliveryTimeMinDays} days</div>
         <p className="text-xs text-gray-600 mt-2">by {product.seller}</p>
-        <button onClick={onViewDetails} className="mt-3 w-full bg-secondary-500 text-white py-2 rounded-lg text-sm hover:bg-secondary-600 transition flex items-center justify-center gap-1"><Eye className="w-4 h-4" /> View Details</button>
+        <button
+          onClick={onViewDetails}
+          className="mt-3 w-full bg-secondary-500 text-white py-2 rounded-lg text-sm hover:bg-secondary-600 transition flex items-center justify-center gap-1"
+        >
+          <Eye className="w-4 h-4" /> View Details
+        </button>
       </div>
     </motion.div>
   );

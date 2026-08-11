@@ -731,7 +731,7 @@ const RentalCard = ({ item, onViewDetails, onBookNow, onWishlist, isWishlisted, 
                   : 'bg-secondary-500 text-white hover:bg-secondary-600'
               }`}
             >
-              Book Now
+              {item.outOfStock ? 'Unavailable' : 'Book Now'}
             </button>
           </div>
         </div>
