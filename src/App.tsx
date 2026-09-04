@@ -1,370 +1,279 @@
-// import React, { useEffect } from 'react';
-// import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-// import { AnimatePresence } from 'framer-motion';
-// import { Toaster } from 'react-hot-toast';
-// import { LocationProvider } from './context/LocationContext';
-// import Layout from './components/layout/Layout';
-// import Navbar from './components/layout/Navbar';
-// import Footer from './components/layout/Footer';
-// import LandingPage from './pages/LandingPage';
-// import MemberPage from './pages/MemberPage';
-// import ProductsPage from './pages/ProductsPage';
-// import ProductDetailsPage from './components/ProductDetailsPage/ProductDetailsPage'; // Assuming you have a ProductDetailsPage component
+import { useEffect, useState } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { Toaster, toast } from "react-hot-toast";
 
-// // Auth Pages
-// import AdminLoginPage from './pages/auth/AdminLoginPage';
+// ============================================================
+// CONTEXT
+// ============================================================
 
-// import ProtectedRoute from './components/admin/auth/ProtectedRoute';
+import { LocationProvider } from "./context/LocationContext";
 
-// // Admin Components
-// import AdminLayout from './components/admin/AdminLayout';
-// import Dashboard from './pages/admin/Dashboard';
-// import SellerManagement from './pages/admin/SellerManagement';
-// import ContractorManagement from './pages/admin/ContractorManagement';
-// import RentalManagement from './pages/admin/RentalManagement';
-// import ProductsManagement from './pages/admin/ProductsManagement';
-// import PaymentsManagement from './pages/admin/PaymentsManagement';
-// import Reports from './pages/admin/Reports';
-// import Settings from './pages/admin/Settings';
+// ============================================================
+// MAIN LAYOUT
+// ============================================================
 
-// // Seller Pages
-// import SellerRegistration from './pages/Seller/SellerRegistration';
-// import SellerDashboard from './pages/Seller/SellerDashboard';
+import Layout from "./components/layout/Layout";
 
-// // Contractor Pages
-// import ContractorRegistration from './pages/Contractor/ContractorRegistration';
-// import ContractorDashboard from './pages/Contractor/ContractorDashboard';
-// import ContractorListing from './pages/Contractor/ContractorListing';
-// import ContractorDetail from './pages/Contractor/ContractorDetail';
+// ============================================================
+// MAIN PAGES
+// ============================================================
 
-// // Rental Pages
-// import RentalRegistration from './pages/Rental/RentalRegistration';
-// import RentalDashboard from './pages/Rental/RentalDashboard';
-// import RentalListing from './pages/Rental/RentalListing';
-// import RentalDetail from './pages/Rental/RentalDetail';
+import LandingPage from "./pages/LandingPage";
+import MemberPage from "./pages/MemberPage";
+import ProductsPage from "./pages/ProductsPage";
+import ProductDetailsPage from "./components/ProductDetailsPage/ProductDetailsPage";
 
-// // Auto-scroll to top component on route changes
-// function ScrollToTop() {
-//   const { pathname } = useLocation();
+// ============================================================
+// USER PAGES
+// ============================================================
 
-//   useEffect(() => {
-//     window.scrollTo(0, 0);
-//   }, [pathname]);
+import Profile from "./components/layout/Profile";
+import Wishlist from "./components/layout/Wishlist";
+import Cart from "./components/layout/Cart";
+import MyOrders from "./components/layout/MyOrders";
+import UserSettings from "./components/layout/Settings";
 
-//   return null;
-// }
+// ============================================================
+// AUTH
+// ============================================================
 
-// function App() {
-//   return (
-//     <LocationProvider>
-//       <Router>
-//         <ScrollToTop />
-//         <Toaster
-//           position="top-right"
-//           toastOptions={{
-//             duration: 4000,
-//             style: {
-//               background: '#363636',
-//               color: '#fff',
-//             },
-//             success: {
-//               duration: 3000,
-//               iconTheme: {
-//                 primary: '#10b981',
-//                 secondary: '#fff',
-//               },
-//             },
-//             error: {
-//               duration: 4000,
-//               iconTheme: {
-//                 primary: '#ef4444',
-//                 secondary: '#fff',
-//               },
-//             },
-//           }}
-//         />
+import { AuthModal } from "./pages/auth/AuthModal";
+import AdminLoginPage from "./pages/auth/AdminLoginPage";
+import ProtectedRoute from "./components/admin/auth/ProtectedRoute";
 
-//         <AnimatePresence mode="wait">
-//           <Routes>
-//             {/* Public Routes with Navbar and Footer */}
-//             <Route
-//               path="/"
-//               element={
-//                 <>
-//                   <Navbar />
-//                   <LandingPage />
-//                   <Footer />
-//                 </>
-//               }
-//             />
-//             <Route
-//               path="/member"
-//               element={
-//                 <>
-//                   <Navbar />
-//                   <MemberPage />
-//                   <Footer />
-//                 </>
-//               }
-//             />
+// ============================================================
+// ADMIN
+// ============================================================
 
-//             {/* Auth Routes */}
-//             <Route path="/admin/login" element={<AdminLoginPage />} />
+import AdminLayout from "./components/admin/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
+import SellerManagement from "./pages/admin/SellerManagement";
+import ContractorManagement from "./pages/admin/ContractorManagement";
+import RentalManagement from "./pages/admin/RentalManagement";
+import ProductsManagement from "./pages/admin/ProductsManagement";
+import PaymentsManagement from "./pages/admin/PaymentsManagement";
+import Reports from "./pages/admin/Reports";
+import AdminSettings from "./pages/admin/Settings";
 
-//             {/* Public Listings (with Layout) */}
-//             <Route
-//               path="/products"
-//               element={
-//                 <Layout>
-//                   <ProductsPage />
-//                 </Layout>
-//               }
-//             />
-//             <Route
-//               path="/product/:id"
-//               element={
-//                 <Layout>
-//                   <ProductDetailsPage />
-//                 </Layout>
-//               }
-//             />
-//             <Route
-//               path="/contractors"
-//               element={
-//                 <Layout>
-//                   <ContractorListing />
-//                 </Layout>
-//               }
-//             />
-//             <Route
-//               path="/contractor/:id"
-//               element={
-//                 <Layout>
-//                   <ContractorDetail />
-//                 </Layout>
-//               }
-//             />
-//             <Route
-//               path="/rentals"
-//               element={
-//                 <Layout>
-//                   <RentalListing />
-//                 </Layout>
-//               }
-//             />
-//             <Route
-//               path="/rental/:id"
-//               element={
-//                 <Layout>
-//                   <RentalDetail />
-//                 </Layout>
-//               }
-//             />
+// ============================================================
+// SELLER
+// ============================================================
 
-//             {/* Public Registration Routes (no authentication required) */}
-//             <Route
-//               path="/seller/register"
-//               element={
-//                 <Layout>
-//                   <SellerRegistration />
-//                 </Layout>
-//               }
-//             />
-//             <Route
-//               path="/contractor/register"
-//               element={
-//                 <Layout>
-//                   <ContractorRegistration />
-//                 </Layout>
-//               }
-//             />
-//             <Route
-//               path="/rental/register"
-//               element={
-//                 <Layout>
-//                   <RentalRegistration />
-//                 </Layout>
-//               }
-//             />
+import SellerRegistration from "./pages/Seller/SellerRegistration";
+import SellerDashboard from "./pages/Seller/SellerDashboard";
 
-//             {/* Protected Admin Routes */}
-//             <Route element={<ProtectedRoute allowedTypes={['admin']} />}>
-//               <Route element={<AdminLayout />}>
-//                 <Route path="/admin/dashboard" element={<Dashboard />} />
-//                 <Route path="/admin/sellers" element={<SellerManagement />} />
-//                 <Route path="/admin/contractors" element={<ContractorManagement />} />
-//                 <Route path="/admin/rentals" element={<RentalManagement />} />
-//                 <Route path="/admin/products" element={<ProductsManagement />} />
-//                 <Route path="/admin/payments" element={<PaymentsManagement />} />
-//                 <Route path="/admin/reports" element={<Reports />} />
-//                 <Route path="/admin/settings" element={<Settings />} />
-//               </Route>
-//             </Route>
+// ============================================================
+// CONTRACTOR
+// ============================================================
 
-//             {/* Protected User Routes (only dashboards) */}
-//             <Route element={<ProtectedRoute allowedTypes={['seller', 'contractor', 'rental', 'customer']} />}>
-//               <Route
-//                 path="/seller/dashboard"
-//                 element={
-//                   <Layout>
-//                     <SellerDashboard />
-//                   </Layout>
-//                 }
-//               />
-//               <Route
-//                 path="/contractor/dashboard"
-//                 element={
-//                   <Layout>
-//                     <ContractorDashboard />
-//                   </Layout>
-//                 }
-//               />
-//               <Route
-//                 path="/rental/dashboard"
-//                 element={
-//                   <Layout>
-//                     <RentalDashboard />
-//                   </Layout>
-//                 }
-//               />
-//             </Route>
+import ContractorRegistration from "./pages/Contractor/ContractorRegistration";
+import ContractorDashboard from "./pages/Contractor/ContractorDashboard";
+import ContractorListing from "./pages/Contractor/ContractorListing";
+import ContractorDetail from "./pages/Contractor/ContractorDetail";
 
-//             {/* Fallback Route */}
-//             <Route path="*" element={<Navigate to="/" replace />} />
-//           </Routes>
-//         </AnimatePresence>
-//       </Router>
-//     </LocationProvider>
-//   );
-// }
+// ============================================================
+// RENTAL
+// ============================================================
 
-// export default App;
+import RentalRegistration from "./pages/Rental/RentalRegistration";
+import RentalDashboard from "./pages/Rental/RentalDashboard";
+import RentalListing from "./pages/Rental/RentalListing";
+import RentalDetail from "./pages/Rental/RentalDetail";
 
+// ============================================================
+// BOOKING
+// ============================================================
 
-import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
-import { Toaster, toast } from 'react-hot-toast';
-import { LocationProvider } from './context/LocationContext';
-import Layout from './components/layout/Layout';
-import Navbar from './components/layout/Navbar';
-import Footer from './components/layout/Footer';
-import LandingPage from './pages/LandingPage';
-import MemberPage from './pages/MemberPage';
-import ProductsPage from './pages/ProductsPage';
-import ProductDetailsPage from './components/ProductDetailsPage/ProductDetailsPage';
+import {
+  BookingModal,
+  BookingFormData,
+} from "./pages/Rental/BookingModal";
 
-// Auth Pages
-import AdminLoginPage from './pages/auth/AdminLoginPage';
+// ============================================================
+// SCROLL TO TOP
+// ============================================================
 
-import ProtectedRoute from './components/admin/auth/ProtectedRoute';
-
-// Admin Components
-import AdminLayout from './components/admin/AdminLayout';
-import Dashboard from './pages/admin/Dashboard';
-import SellerManagement from './pages/admin/SellerManagement';
-import ContractorManagement from './pages/admin/ContractorManagement';
-import RentalManagement from './pages/admin/RentalManagement';
-import ProductsManagement from './pages/admin/ProductsManagement';
-import PaymentsManagement from './pages/admin/PaymentsManagement';
-import Reports from './pages/admin/Reports';
-import Settings from './pages/admin/Settings';
-
-// Seller Pages
-import SellerRegistration from './pages/Seller/SellerRegistration';
-import SellerDashboard from './pages/Seller/SellerDashboard';
-
-// Contractor Pages
-import ContractorRegistration from './pages/Contractor/ContractorRegistration';
-import ContractorDashboard from './pages/Contractor/ContractorDashboard';
-import ContractorListing from './pages/Contractor/ContractorListing';
-import ContractorDetail from './pages/Contractor/ContractorDetail';
-
-// Rental Pages
-import RentalRegistration from './pages/Rental/RentalRegistration';
-import RentalDashboard from './pages/Rental/RentalDashboard';
-import RentalListing from './pages/Rental/RentalListing';
-import RentalDetail from './pages/Rental/RentalDetail';
-import { BookingModal, BookingFormData } from './pages/Rental/BookingModal';
-
-// Auto-scroll to top component on route changes
 function ScrollToTop() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
   }, [pathname]);
 
   return null;
 }
 
-function App() {
-  // Global modal state
-  const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const [selectedItem] = useState<any>(null); // Removed unused setter 'setSelectedItem'
+// ============================================================
+// APP
+// ============================================================
 
-  const handleBookingSubmit = (data: BookingFormData) => {
-    console.log('Booking submitted for item:', selectedItem, data);
-    toast.success('Consultation request sent successfully!');
+function App() {
+  // ==========================================================
+  // LOGIN STATE
+  // ==========================================================
+
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    try {
+      const savedUser = localStorage.getItem(
+        "casa_terminal_user"
+      );
+
+      return Boolean(savedUser);
+    } catch (error) {
+      console.error(
+        "Unable to read login state:",
+        error
+      );
+
+      return false;
+    }
+  });
+
+  // ==========================================================
+  // BOOKING STATE
+  // ==========================================================
+
+  const [isBookingOpen, setIsBookingOpen] =
+    useState<boolean>(false);
+
+  // ==========================================================
+  // LOGIN CHECK
+  // ==========================================================
+
+  useEffect(() => {
+    try {
+      const savedUser = localStorage.getItem(
+        "casa_terminal_user"
+      );
+
+      setIsLoggedIn(Boolean(savedUser));
+    } catch (error) {
+      console.error(
+        "Login check failed:",
+        error
+      );
+
+      setIsLoggedIn(false);
+    }
+  }, []);
+
+  // ==========================================================
+  // BOOKING SUBMIT
+  // ==========================================================
+
+  const handleBookingSubmit = (
+    data: BookingFormData
+  ) => {
+    console.log(
+      "Booking submitted:",
+      data
+    );
+
+    toast.success(
+      "Consultation request sent successfully!"
+    );
+
+    setIsBookingOpen(false);
   };
+
+  // ==========================================================
+  // LOGIN SUCCESS
+  // ==========================================================
+
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true);
+
+    toast.success(
+      "Welcome to CASA TERMINAL!"
+    );
+  };
+
+  // ==========================================================
+  // LOGIN SCREEN
+  // ==========================================================
+
+  if (!isLoggedIn) {
+    return (
+      <AuthModal
+        onSuccess={handleLoginSuccess}
+      />
+    );
+  }
+
+  // ==========================================================
+  // MAIN APPLICATION
+  // ==========================================================
 
   return (
     <LocationProvider>
       <Router>
+
+        {/* ====================================================
+            SCROLL TO TOP
+        ==================================================== */}
+
         <ScrollToTop />
+
+        {/* ====================================================
+            TOASTER
+        ==================================================== */}
+
         <Toaster
           position="top-right"
           toastOptions={{
-            duration: 4000,
-            style: {
-              background: '#363636',
-              color: '#fff',
-            },
-            success: {
-              duration: 3000,
-              iconTheme: {
-                primary: '#10b981',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              duration: 4000,
-              iconTheme: {
-                primary: '#ef4444',
-                secondary: '#fff',
-              },
-            },
+            duration: 3000,
           }}
         />
 
+        {/* ====================================================
+            APPLICATION ROUTES
+        ==================================================== */}
+
         <AnimatePresence mode="wait">
+
           <Routes>
-            {/* Public Routes with Navbar and Footer */}
+
+            {/* ==================================================
+                HOME
+            ================================================== */}
+
             <Route
               path="/"
               element={
-                <>
-                  <Navbar />
+                <Layout>
                   <LandingPage />
-                  <Footer />
-                </>
+                </Layout>
               }
             />
+
+            {/* ==================================================
+                MEMBER
+            ================================================== */}
+
             <Route
               path="/member"
               element={
-                <>
-                  <Navbar />
+                <Layout>
                   <MemberPage />
-                  <Footer />
-                </>
+                </Layout>
               }
             />
 
-            {/* Auth Routes */}
-            <Route path="/admin/login" element={<AdminLoginPage />} />
+            {/* ==================================================
+                PRODUCTS
+            ================================================== */}
 
-            {/* Public Listings (with Layout) */}
             <Route
               path="/products"
               element={
@@ -373,6 +282,11 @@ function App() {
                 </Layout>
               }
             />
+
+            {/* ==================================================
+                PRODUCT DETAILS
+            ================================================== */}
+
             <Route
               path="/product/:id"
               element={
@@ -381,6 +295,89 @@ function App() {
                 </Layout>
               }
             />
+
+            {/* ==================================================
+                PROFILE
+            ================================================== */}
+
+            <Route
+              path="/profile"
+              element={
+                <Layout>
+                  <Profile />
+                </Layout>
+              }
+            />
+
+            {/* ==================================================
+                WISHLIST
+            ================================================== */}
+
+            <Route
+              path="/wishlist"
+              element={
+                <Layout>
+                  <Wishlist />
+                </Layout>
+              }
+            />
+
+            {/* ==================================================
+                CART
+            ================================================== */}
+
+            <Route
+              path="/cart"
+              element={
+                <Layout>
+                  <Cart />
+                </Layout>
+              }
+            />
+
+            {/* ==================================================
+                MY ORDERS
+            ================================================== */}
+
+            <Route
+              path="/orders"
+              element={
+                <Layout>
+                  <MyOrders />
+                </Layout>
+              }
+            />
+
+            {/* ==================================================
+                USER SETTINGS
+                IMPORTANT:
+                This is the customer/user settings page.
+            ================================================== */}
+
+            <Route
+              path="/settings"
+              element={
+                <Layout>
+                  <UserSettings />
+                </Layout>
+              }
+            />
+
+            {/* ==================================================
+                ADMIN LOGIN
+            ================================================== */}
+
+            <Route
+              path="/admin/login"
+              element={
+                <AdminLoginPage />
+              }
+            />
+
+            {/* ==================================================
+                CONTRACTOR LISTING
+            ================================================== */}
+
             <Route
               path="/contractors"
               element={
@@ -389,6 +386,11 @@ function App() {
                 </Layout>
               }
             />
+
+            {/* ==================================================
+                CONTRACTOR DETAILS
+            ================================================== */}
+
             <Route
               path="/contractor/:id"
               element={
@@ -397,6 +399,11 @@ function App() {
                 </Layout>
               }
             />
+
+            {/* ==================================================
+                RENTAL LISTING
+            ================================================== */}
+
             <Route
               path="/rentals"
               element={
@@ -405,6 +412,11 @@ function App() {
                 </Layout>
               }
             />
+
+            {/* ==================================================
+                RENTAL DETAILS
+            ================================================== */}
+
             <Route
               path="/rental/:id"
               element={
@@ -414,7 +426,10 @@ function App() {
               }
             />
 
-            {/* Public Registration Routes */}
+            {/* ==================================================
+                SELLER REGISTRATION
+            ================================================== */}
+
             <Route
               path="/seller/register"
               element={
@@ -423,6 +438,11 @@ function App() {
                 </Layout>
               }
             />
+
+            {/* ==================================================
+                CONTRACTOR REGISTRATION
+            ================================================== */}
+
             <Route
               path="/contractor/register"
               element={
@@ -431,6 +451,11 @@ function App() {
                 </Layout>
               }
             />
+
+            {/* ==================================================
+                RENTAL REGISTRATION
+            ================================================== */}
+
             <Route
               path="/rental/register"
               element={
@@ -440,22 +465,27 @@ function App() {
               }
             />
 
-            {/* Protected Admin Routes */}
-            <Route element={<ProtectedRoute allowedTypes={['admin']} />}>
-              <Route element={<AdminLayout />}>
-                <Route path="/admin/dashboard" element={<Dashboard />} />
-                <Route path="/admin/sellers" element={<SellerManagement />} />
-                <Route path="/admin/contractors" element={<ContractorManagement />} />
-                <Route path="/admin/rentals" element={<RentalManagement />} />
-                <Route path="/admin/products" element={<ProductsManagement />} />
-                <Route path="/admin/payments" element={<PaymentsManagement />} />
-                <Route path="/admin/reports" element={<Reports />} />
-                <Route path="/admin/settings" element={<Settings />} />
-              </Route>
-            </Route>
+            {/* ==================================================
+                USER PROTECTED ROUTES
+            ================================================== */}
 
-            {/* Protected User Routes */}
-            <Route element={<ProtectedRoute allowedTypes={['seller', 'contractor', 'rental', 'customer']} />}>
+            <Route
+              element={
+                <ProtectedRoute
+                  allowedTypes={[
+                    "seller",
+                    "contractor",
+                    "rental",
+                    "customer",
+                  ]}
+                />
+              }
+            >
+
+              {/* ==================================================
+                  SELLER DASHBOARD
+              ================================================== */}
+
               <Route
                 path="/seller/dashboard"
                 element={
@@ -464,6 +494,11 @@ function App() {
                   </Layout>
                 }
               />
+
+              {/* ==================================================
+                  CONTRACTOR DASHBOARD
+              ================================================== */}
+
               <Route
                 path="/contractor/dashboard"
                 element={
@@ -472,6 +507,11 @@ function App() {
                   </Layout>
                 }
               />
+
+              {/* ==================================================
+                  RENTAL DASHBOARD
+              ================================================== */}
+
               <Route
                 path="/rental/dashboard"
                 element={
@@ -480,19 +520,155 @@ function App() {
                   </Layout>
                 }
               />
+
             </Route>
 
-            {/* Fallback Route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* ==================================================
+                ADMIN PROTECTED ROUTES
+            ================================================== */}
+
+            <Route
+              element={
+                <ProtectedRoute
+                  allowedTypes={["admin"]}
+                />
+              }
+            >
+
+              {/* ==================================================
+                  ADMIN LAYOUT
+              ================================================== */}
+
+              <Route
+                element={
+                  <AdminLayout />
+                }
+              >
+
+                {/* ==================================================
+                    ADMIN DASHBOARD
+                ================================================== */}
+
+                <Route
+                  path="/admin/dashboard"
+                  element={
+                    <Dashboard />
+                  }
+                />
+
+                {/* ==================================================
+                    ADMIN SELLERS
+                ================================================== */}
+
+                <Route
+                  path="/admin/sellers"
+                  element={
+                    <SellerManagement />
+                  }
+                />
+
+                {/* ==================================================
+                    ADMIN CONTRACTORS
+                ================================================== */}
+
+                <Route
+                  path="/admin/contractors"
+                  element={
+                    <ContractorManagement />
+                  }
+                />
+
+                {/* ==================================================
+                    ADMIN RENTALS
+                ================================================== */}
+
+                <Route
+                  path="/admin/rentals"
+                  element={
+                    <RentalManagement />
+                  }
+                />
+
+                {/* ==================================================
+                    ADMIN PRODUCTS
+                ================================================== */}
+
+                <Route
+                  path="/admin/products"
+                  element={
+                    <ProductsManagement />
+                  }
+                />
+
+                {/* ==================================================
+                    ADMIN PAYMENTS
+                ================================================== */}
+
+                <Route
+                  path="/admin/payments"
+                  element={
+                    <PaymentsManagement />
+                  }
+                />
+
+                {/* ==================================================
+                    ADMIN REPORTS
+                ================================================== */}
+
+                <Route
+                  path="/admin/reports"
+                  element={
+                    <Reports />
+                  }
+                />
+
+                {/* ==================================================
+                    ADMIN SETTINGS
+                ================================================== */}
+
+                <Route
+                  path="/admin/settings"
+                  element={
+                    <AdminSettings />
+                  }
+                />
+
+              </Route>
+
+            </Route>
+
+            {/* ==================================================
+                404 / UNKNOWN ROUTE
+            ================================================== */}
+
+            <Route
+              path="*"
+              element={
+                <Navigate
+                  to="/"
+                  replace
+                />
+              }
+            />
+
           </Routes>
+
         </AnimatePresence>
 
-        {/* Global Booking Modal Render */}
+        {/* ====================================================
+            BOOKING MODAL
+            IMPORTANT:
+            OUTSIDE <Routes>
+        ==================================================== */}
+
         <BookingModal
           isOpen={isBookingOpen}
-          onClose={() => setIsBookingOpen(false)}
+          onClose={() =>
+            setIsBookingOpen(false)
+          }
           onSubmit={handleBookingSubmit}
         />
+
       </Router>
     </LocationProvider>
   );

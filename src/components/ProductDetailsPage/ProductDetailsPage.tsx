@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ChangeEvent, MouseEvent, ReactNode } from 'react';
+import type {
+  ChangeEvent,
+  MouseEvent,
+  ReactNode,
+} from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
   ArrowLeft,
   DollarSign,
-  Eye,
   Flame,
   Heart,
-  MapPin,
   MoreVertical,
   PenTool,
-  Plus,
-  Search,
   Share2,
+  Shield,
   ShoppingBag,
+  ShoppingCart,
   Star,
   Store,
   Trash2,
@@ -22,10 +24,13 @@ import {
   TrendingUp,
   Truck,
   X,
-  Shield,
 } from 'lucide-react';
 
 import { toast } from 'react-hot-toast';
+
+/* ============================================================
+   PRODUCT TYPE
+============================================================ */
 
 export interface Product {
   id: string;
@@ -50,10 +55,18 @@ export interface Product {
   gallery?: string[];
 }
 
+/* ============================================================
+   LOCAL STORAGE KEYS
+============================================================ */
+
 const STORAGE_KEYS = {
   PRODUCTS: 'construction_products',
   WISHLIST: 'product_wishlist',
 };
+
+/* ============================================================
+   DEFAULT PRODUCT
+============================================================ */
 
 const defaultProduct: Product = {
   id: 'p1',
@@ -66,16 +79,18 @@ const defaultProduct: Product = {
   sellerId: 's1',
   rating: 4.5,
   reviewCount: 1250,
-  location: 'Mumbai',
+  location: 'Delhi',
   image:
-    'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=500',
+    'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800',
   stock: 5000,
   isBestPrice: true,
   isRecommended: true,
   deliveryTimeMinDays: 2,
   createdAt: '2024-01-15',
+
   description:
     "UltraTech Cement is India's No.1 Cement brand. It is a high quality Portland Pozzolana Cement (PPC) suitable for general construction. It offers high strength, durability and smooth finish.",
+
   specifications: {
     Type: 'PPC (Portland Pozzolana Cement)',
     'Compressive Strength': '43 MPa',
@@ -84,12 +99,17 @@ const defaultProduct: Product = {
     'Initial Setting Time': '30 mins',
     Color: 'Grey',
   },
+
   gallery: [
-    'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=500',
-    'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500',
-    'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=500',
+    'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800',
+    'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=800',
+    'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=800',
   ],
 };
+
+/* ============================================================
+   PRODUCT DETAILS PAGE
+============================================================ */
 
 export const ProductDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -97,146 +117,178 @@ export const ProductDetailsPage = () => {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [activeTab, setActiveTab] = useState('Overview');
-  const [product, setProduct] = useState<Product>(defaultProduct);
-  const [isWishlisted, setIsWishlisted] = useState(false);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] =
+    useState<string>('Overview');
 
-  /*
-   * ============================================================
-   * LOAD PRODUCT
-   * ============================================================
-   */
+  const [product, setProduct] =
+    useState<Product>(defaultProduct);
+
+  const [isWishlisted, setIsWishlisted] =
+    useState<boolean>(false);
+
+  const [previewImage, setPreviewImage] =
+    useState<string | null>(null);
+
+  /* ==========================================================
+     LOAD PRODUCT
+  ========================================================== */
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
+      const stored = localStorage.getItem(
+        STORAGE_KEYS.PRODUCTS
+      );
 
       if (stored) {
         const products: Product[] = JSON.parse(stored);
 
-        const match = products.find((item) => item.id === id);
+        const matchedProduct = products.find(
+          (item) => item.id === id
+        );
 
-        if (match) {
+        if (matchedProduct) {
           setProduct({
             ...defaultProduct,
-            ...match,
+            ...matchedProduct,
           });
 
           return;
         }
       }
     } catch (error) {
-      console.error('Error reading products from localStorage:', error);
+      console.error(
+        'Error reading products:',
+        error
+      );
     }
 
     setProduct(defaultProduct);
   }, [id]);
 
-  /*
-   * ============================================================
-   * CHECK WISHLIST
-   * ============================================================
-   */
+  /* ==========================================================
+     LOAD WISHLIST
+  ========================================================== */
 
   useEffect(() => {
-    try {
-      const savedWishlist = localStorage.getItem(STORAGE_KEYS.WISHLIST);
-
-      if (savedWishlist) {
-        const list: string[] = JSON.parse(savedWishlist);
-
-        setIsWishlisted(list.includes(product.id));
-      } else {
-        setIsWishlisted(false);
-      }
-    } catch (error) {
-      console.error('Error reading wishlist:', error);
-      setIsWishlisted(false);
-    }
-  }, [product.id]);
-
-  /*
-   * ============================================================
-   * SAVE PRODUCT
-   * ============================================================
-   */
-
-  const saveProductToStorage = (updatedProduct: Product) => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-
-      let list: Product[] = stored ? JSON.parse(stored) : [];
-
-      const index = list.findIndex(
-        (item) => item.id === updatedProduct.id
-      );
-
-      if (index !== -1) {
-        list[index] = updatedProduct;
-      } else {
-        list.push(updatedProduct);
-      }
-
-      localStorage.setItem(
-        STORAGE_KEYS.PRODUCTS,
-        JSON.stringify(list)
-      );
-    } catch (error) {
-      console.error(
-        'Failed to save product to localStorage:',
-        error
-      );
-    }
-  };
-
-  /*
-   * ============================================================
-   * WISHLIST
-   * ============================================================
-   */
-
-  const handleToggleWishlist = () => {
     try {
       const savedWishlist = localStorage.getItem(
         STORAGE_KEYS.WISHLIST
       );
 
-      let list: string[] = savedWishlist
+      if (!savedWishlist) {
+        setIsWishlisted(false);
+        return;
+      }
+
+      const wishlist: string[] =
+        JSON.parse(savedWishlist);
+
+      setIsWishlisted(
+        wishlist.includes(product.id)
+      );
+    } catch (error) {
+      console.error(
+        'Error reading wishlist:',
+        error
+      );
+
+      setIsWishlisted(false);
+    }
+  }, [product.id]);
+
+  /* ==========================================================
+     SAVE PRODUCT
+  ========================================================== */
+
+  const saveProductToStorage = (
+    updatedProduct: Product
+  ): void => {
+    try {
+      const stored = localStorage.getItem(
+        STORAGE_KEYS.PRODUCTS
+      );
+
+      const products: Product[] = stored
+        ? JSON.parse(stored)
+        : [];
+
+      const existingIndex = products.findIndex(
+        (item) => item.id === updatedProduct.id
+      );
+
+      if (existingIndex >= 0) {
+        products[existingIndex] = updatedProduct;
+      } else {
+        products.push(updatedProduct);
+      }
+
+      localStorage.setItem(
+        STORAGE_KEYS.PRODUCTS,
+        JSON.stringify(products)
+      );
+    } catch (error) {
+      console.error(
+        'Failed to save product:',
+        error
+      );
+    }
+  };
+
+  /* ==========================================================
+     TOGGLE WISHLIST
+  ========================================================== */
+
+  const handleToggleWishlist = (): void => {
+    try {
+      const savedWishlist = localStorage.getItem(
+        STORAGE_KEYS.WISHLIST
+      );
+
+      let wishlist: string[] = savedWishlist
         ? JSON.parse(savedWishlist)
         : [];
 
-      if (list.includes(product.id)) {
-        list = list.filter((item) => item !== product.id);
+      if (wishlist.includes(product.id)) {
+        wishlist = wishlist.filter(
+          (item) => item !== product.id
+        );
 
         setIsWishlisted(false);
 
-        toast.success('Removed from wishlist');
+        toast.success(
+          'Removed from wishlist'
+        );
       } else {
-        list.push(product.id);
+        wishlist.push(product.id);
 
         setIsWishlisted(true);
 
-        toast.success('Added to wishlist');
+        toast.success(
+          'Added to wishlist'
+        );
       }
 
       localStorage.setItem(
         STORAGE_KEYS.WISHLIST,
-        JSON.stringify(list)
+        JSON.stringify(wishlist)
       );
     } catch (error) {
-      console.error('Wishlist error:', error);
-      toast.error('Failed to update wishlist');
+      console.error(
+        'Wishlist error:',
+        error
+      );
+
+      toast.error(
+        'Failed to update wishlist'
+      );
     }
   };
 
-  /*
-   * ============================================================
-   * SHARE
-   * ============================================================
-   */
+  /* ==========================================================
+     SHARE PRODUCT
+  ========================================================== */
 
-  const handleShare = async () => {
+  const handleShare = async (): Promise<void> => {
     try {
       if (navigator.share) {
         await navigator.share({
@@ -244,27 +296,29 @@ export const ProductDetailsPage = () => {
           text: `Check out ${product.name}`,
           url: window.location.href,
         });
-      } else {
-        await navigator.clipboard.writeText(
-          window.location.href
-        );
 
-        toast.success('Link copied to clipboard!');
+        return;
       }
+
+      await navigator.clipboard.writeText(
+        window.location.href
+      );
+
+      toast.success(
+        'Link copied to clipboard!'
+      );
     } catch {
-      // User cancelled share
+      // User cancelled sharing.
     }
   };
 
-  /*
-   * ============================================================
-   * IMAGE UPLOAD
-   * ============================================================
-   */
+  /* ==========================================================
+     IMAGE UPLOAD
+  ========================================================== */
 
   const handleImageUpload = (
     event: ChangeEvent<HTMLInputElement>
-  ) => {
+  ): void => {
     const files = event.target.files;
 
     if (!files || files.length === 0) {
@@ -274,52 +328,52 @@ export const ProductDetailsPage = () => {
     const file = files[0];
 
     if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
+      toast.error(
+        'Please select an image file'
+      );
+
       return;
     }
 
     const imageUrl = URL.createObjectURL(file);
 
     const currentGallery =
-      product.gallery && product.gallery.length > 0
+      product.gallery &&
+      product.gallery.length > 0
         ? product.gallery
         : [product.image];
 
-    const updatedGallery = [
-      ...currentGallery,
-      imageUrl,
-    ];
-
     const updatedProduct: Product = {
       ...product,
-      gallery: updatedGallery,
+      gallery: [
+        ...currentGallery,
+        imageUrl,
+      ],
     };
 
     setProduct(updatedProduct);
-
     saveProductToStorage(updatedProduct);
 
-    toast.success('Image added successfully!');
+    toast.success(
+      'Image added successfully!'
+    );
 
     event.target.value = '';
   };
 
-  /*
-   * ============================================================
-   * REMOVE IMAGE
-   * ============================================================
-   */
+  /* ==========================================================
+     REMOVE IMAGE
+  ========================================================== */
 
   const handleRemoveImage = (
     imageUrlToRemove: string,
     event?: MouseEvent
-  ) => {
-    if (event) {
-      event.stopPropagation();
-    }
+  ): void => {
+    event?.stopPropagation();
 
     const currentGallery =
-      product.gallery && product.gallery.length > 0
+      product.gallery &&
+      product.gallery.length > 0
         ? product.gallery
         : [product.image];
 
@@ -331,9 +385,10 @@ export const ProductDetailsPage = () => {
       return;
     }
 
-    const updatedGallery = currentGallery.filter(
-      (url) => url !== imageUrlToRemove
-    );
+    const updatedGallery =
+      currentGallery.filter(
+        (image) => image !== imageUrlToRemove
+      );
 
     const updatedProduct: Product = {
       ...product,
@@ -341,1171 +396,1123 @@ export const ProductDetailsPage = () => {
     };
 
     setProduct(updatedProduct);
-
     saveProductToStorage(updatedProduct);
 
-    if (previewImage === imageUrlToRemove) {
+    if (
+      previewImage === imageUrlToRemove
+    ) {
       setPreviewImage(null);
     }
 
-    toast.success('Image removed successfully!');
-  };
-
-  /*
-   * ============================================================
-   * BUY NOW
-   * ============================================================
-   */
-
-  const handleBuyNow = () => {
     toast.success(
-      `Redirecting to checkout for ${product.name}!`
+      'Image removed successfully!'
     );
   };
 
-  /*
-   * ============================================================
-   * IMAGE LIST
-   * ============================================================
-   */
+  /* ==========================================================
+     ADD TO CART
+  ========================================================== */
+
+  const handleAddToCart = (): void => {
+    if (product.stock <= 0) {
+      toast.error(
+        'Product is out of stock'
+      );
+
+      return;
+    }
+
+    toast.success(
+      `${product.name} added to cart`
+    );
+  };
+
+  /* ==========================================================
+     BUY NOW
+  ========================================================== */
+
+  const handleBuyNow = (): void => {
+    if (product.stock <= 0) {
+      toast.error(
+        'Product is out of stock'
+      );
+
+      return;
+    }
+
+    toast.success(
+      `Proceeding to checkout for ${product.name}`
+    );
+  };
+
+  /* ==========================================================
+     IMAGE LIST
+  ========================================================== */
 
   const imagesList =
-    product.gallery && product.gallery.length > 0
+    product.gallery &&
+    product.gallery.length > 0
       ? product.gallery
       : [product.image];
 
-  /*
-   * ============================================================
-   * RENDER
-   * ============================================================
-   */
+  /* ==========================================================
+     RENDER
+  ========================================================== */
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-gray-800 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F5F3EF] text-gray-800">
 
-      {/* Top Accent Line */}
-      <div className="h-1 bg-orange-500 w-full" />
+      {/* ======================================================
+          BREADCRUMB
+      ====================================================== */}
 
-      {/* Main Container */}
-      <div className="flex flex-1 overflow-hidden">
+      <main className="max-w-[1500px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-        {/* ======================================================
-            MAIN CONTENT
-        ====================================================== */}
+        <div className="flex items-center gap-2 text-sm text-gray-500 mb-5">
 
-        <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1 hover:text-[#5A2E12]"
+          >
+            <ArrowLeft size={15} />
+            Back
+          </button>
 
-          {/* ====================================================
-              TOP NAVBAR
-          ==================================================== */}
+          <span>/</span>
 
-          <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-10">
+          <button
+            type="button"
+            onClick={() =>
+              navigate('/products')
+            }
+            className="hover:text-[#5A2E12]"
+          >
+            Products
+          </button>
 
-            <div className="flex items-center gap-4 flex-1 max-w-xl">
+          <span>/</span>
 
-              {/* Menu Button */}
-              <button
-                type="button"
-                className="text-gray-500 hover:text-gray-700"
-                onClick={() =>
-                  toast('Menu options')
-                }
-              >
-                <MenuIcon />
-              </button>
+          <span className="font-medium text-gray-800 truncate">
+            {product.name}
+          </span>
 
-              {/* Search */}
-              <div className="relative w-full">
+        </div>
 
-                <Search
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
+        {/* ====================================================
+            PRODUCT CARD
+        ==================================================== */}
 
-                <input
-                  type="text"
-                  placeholder="Search products, brands..."
-                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                />
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
 
-              </div>
-
-            </div>
-
-            <div className="flex items-center gap-4 text-xs font-medium text-gray-600">
-              {/* Right side actions can be added here */}
-            </div>
-
-          </header>
-
-          {/* ====================================================
-              MAIN CONTENT
-          ==================================================== */}
-
-          <main className="p-6 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-5 sm:p-7">
 
             {/* ==================================================
-                BREADCRUMB
+                IMAGE SECTION
             ================================================== */}
 
-            <div className="flex items-center gap-3 text-sm text-gray-500">
+            <div className="lg:col-span-5">
 
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="p-1 rounded-md bg-white border border-gray-200 hover:bg-gray-50"
-              >
-                <ArrowLeft size={16} />
-              </button>
+              <div className="flex flex-col-reverse sm:flex-row gap-4">
 
-              <button
-                type="button"
-                onClick={() => navigate('/products')}
-                className="hover:underline"
-              >
-                Products
-              </button>
+                {/* THUMBNAILS */}
 
-              <span>&gt;</span>
+                <div className="flex sm:flex-col gap-3 overflow-x-auto">
 
-              <span className="font-medium text-gray-900">
-                {product.name}
-              </span>
-
-            </div>
-
-            {/* ==================================================
-                PRODUCT HERO CARD
-            ================================================== */}
-
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 flex flex-col md:flex-row gap-8 items-center md:items-start">
-
-              {/* Product Image */}
-
-              <div className="w-48 h-48 bg-gray-50 rounded-xl border border-gray-100 p-4 flex items-center justify-center shrink-0 overflow-hidden">
-
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="max-h-full max-w-full object-contain hover:scale-105 transition-transform duration-300"
-                />
-
-              </div>
-
-              {/* Product Information */}
-
-              <div className="flex-1 space-y-3 w-full">
-
-                {/* Badge + Actions */}
-
-                <div className="flex items-center justify-between">
-
-                  {product.isBestPrice ? (
-                    <span className="bg-emerald-50 text-emerald-600 border border-emerald-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                      Best Price
-                    </span>
-                  ) : (
-                    <span className="bg-blue-50 text-blue-600 border border-blue-200 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                      {product.category}
-                    </span>
+                  {imagesList.map(
+                    (image, index) => (
+                      <button
+                        type="button"
+                        key={`${image}-${index}`}
+                        onClick={() =>
+                          setPreviewImage(image)
+                        }
+                        className="w-16 h-16 shrink-0 border border-gray-300 hover:border-[#5A2E12] rounded-lg p-1 bg-white transition"
+                      >
+                        <img
+                          src={image}
+                          alt={`${product.name} ${index + 1}`}
+                          className="w-full h-full object-contain"
+                        />
+                      </button>
+                    )
                   )}
 
-                  <div className="flex items-center gap-2">
+                  {/* ADD IMAGE */}
 
-                    {/* Wishlist */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      fileInputRef.current?.click()
+                    }
+                    className="w-16 h-16 shrink-0 border border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center text-gray-400 hover:text-[#5A2E12] hover:border-[#5A2E12]"
+                  >
+                    <span className="text-xl">
+                      +
+                    </span>
 
-                    <button
-                      type="button"
-                      onClick={handleToggleWishlist}
-                      className={`p-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition ${
+                    <span className="text-[9px]">
+                      Add
+                    </span>
+                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+
+                </div>
+
+                {/* MAIN IMAGE */}
+
+                <div className="flex-1 min-h-[390px] flex items-center justify-center relative bg-white rounded-xl">
+
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    onClick={() =>
+                      setPreviewImage(
+                        product.image
+                      )
+                    }
+                    className="max-h-[390px] max-w-full object-contain cursor-zoom-in hover:scale-105 transition-transform duration-300"
+                  />
+
+                  {/* WISHLIST */}
+
+                  <button
+                    type="button"
+                    onClick={
+                      handleToggleWishlist
+                    }
+                    className={`absolute top-3 right-3 w-11 h-11 rounded-full bg-white shadow-md border flex items-center justify-center transition ${
+                      isWishlisted
+                        ? 'text-red-500'
+                        : 'text-gray-500 hover:text-[#5A2E12]'
+                    }`}
+                  >
+                    <Heart
+                      size={22}
+                      className={
                         isWishlisted
-                          ? 'text-red-500'
-                          : 'text-gray-600'
-                      }`}
-                      title="Wishlist"
-                    >
-                      <Heart
-                        size={16}
-                        className={
-                          isWishlisted
-                            ? 'fill-red-500'
-                            : ''
-                        }
-                      />
-                    </button>
+                          ? 'fill-red-500'
+                          : ''
+                      }
+                    />
+                  </button>
 
-                    {/* Share */}
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={handleShare}
-                      className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
-                      title="Share"
-                    >
-                      <Share2 size={16} />
-                    </button>
+              </div>
 
-                    {/* More */}
+              {/* =================================================
+                  ACTION BUTTONS
+              ================================================= */}
+
+              <div className="flex gap-3 mt-6">
+
+                <button
+                  type="button"
+                  onClick={
+                    handleAddToCart
+                  }
+                  disabled={
+                    product.stock <= 0
+                  }
+                  className="flex-1 bg-[#5A2E12] hover:bg-[#3F2413] disabled:bg-gray-400 text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition"
+                >
+                  <ShoppingCart size={19} />
+                  Add to Cart
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleBuyNow}
+                  disabled={
+                    product.stock <= 0
+                  }
+                  className="flex-1 bg-[#6B3A18] hover:bg-[#5A2E12] disabled:bg-gray-400 text-white font-bold py-3.5 rounded-lg flex items-center justify-center gap-2 transition"
+                >
+                  <ShoppingBag size={19} />
+                  Buy Now
+                </button>
+
+              </div>
+
+            </div>
+
+            {/* ==================================================
+                PRODUCT INFORMATION
+            ================================================== */}
+
+            <div className="lg:col-span-7">
+
+              <div className="flex justify-between gap-4">
+
+                <div>
+
+                  <p className="text-sm text-[#5A2E12] font-semibold mb-1">
+                    {product.brand}
+                  </p>
+
+                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 leading-tight">
+                    {product.name}
+                  </h1>
+
+                </div>
+
+                <div className="flex gap-2">
+
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    className="w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center hover:bg-[#F5EBDD]"
+                    aria-label="Share product"
+                  >
+                    <Share2 size={17} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toast(
+                        'More product options'
+                      )
+                    }
+                    className="w-10 h-10 border border-gray-300 rounded-full flex items-center justify-center hover:bg-[#F5EBDD]"
+                    aria-label="More options"
+                  >
+                    <MoreVertical size={17} />
+                  </button>
+
+                </div>
+
+              </div>
+
+              {/* RATING AND PRICE */}
+
+              <div className="border-b border-gray-200 pb-5 mt-4">
+
+                <div className="flex items-center gap-3">
+
+                  <span className="bg-[#5A2E12] text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                    {product.rating}
+
+                    <Star
+                      size={11}
+                      className="fill-[#E8D5B5]"
+                    />
+                  </span>
+
+                  <span className="text-sm font-semibold text-gray-600">
+                    {product.reviewCount.toLocaleString()}{' '}
+                    Ratings & Reviews
+                  </span>
+
+                </div>
+
+                <div className="flex items-center gap-3 mt-5">
+
+                  <span className="text-3xl font-extrabold text-gray-900">
+                    ₹
+                    {product.price.toLocaleString()}
+                  </span>
+
+                  <span className="text-sm text-gray-500">
+                    + ₹
+                    {product.deliveryCharge.toLocaleString()}{' '}
+                    delivery
+                  </span>
+
+                </div>
+
+                <p className="text-xs text-gray-500 mt-1">
+                  Inclusive of applicable taxes
+                </p>
+
+              </div>
+
+              {/* =================================================
+                  OFFERS
+              ================================================= */}
+
+              <div className="py-5 border-b">
+
+                <h3 className="font-bold text-gray-900 mb-4">
+                  Available Offers
+                </h3>
+
+                <div className="space-y-4">
+
+                  <Offer
+                    title="Special Price"
+                    description="Get extra discount on selected construction materials"
+                  />
+
+                  <Offer
+                    title="Bank Offer"
+                    description="10% instant discount with selected bank cards"
+                  />
+
+                  <Offer
+                    title="Bulk Order Offer"
+                    description="Extra savings available on orders above ₹50,000"
+                  />
+
+                </div>
+
+              </div>
+
+              {/* =================================================
+                  DELIVERY
+              ================================================= */}
+
+              <div className="py-5 border-b">
+
+                <h3 className="font-bold mb-3">
+                  Delivery
+                </h3>
+
+                <div className="flex flex-wrap items-center gap-3">
+
+                  <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+
+                    <input
+                      type="text"
+                      placeholder="Enter pincode"
+                      className="px-3 py-2 outline-none text-sm w-36"
+                    />
 
                     <button
                       type="button"
                       onClick={() =>
-                        toast('Additional options')
+                        toast.success(
+                          'Checking delivery availability'
+                        )
                       }
-                      className="p-2 border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600"
-                      title="More options"
+                      className="px-3 text-[#5A2E12] font-bold text-sm"
                     >
-                      <MoreVertical size={16} />
+                      Check
                     </button>
 
                   </div>
 
-                </div>
+                  <span className="text-green-600 text-sm flex items-center gap-1">
+                    <Truck size={15} />
 
-                {/* Product Name */}
-
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {product.name}
-                </h2>
-
-                {/* Brand */}
-
-                <p className="text-xs text-gray-500">
-                  {product.brand} Ltd.{' '}
-                  <span className="text-gray-400">
-                    by {product.seller}
-                  </span>
-                </p>
-
-                {/* Rating */}
-
-                <div className="flex items-center gap-4 text-xs text-gray-500 py-1">
-
-                  <div className="flex items-center gap-1 font-semibold text-gray-900">
-
-                    <Star
-                      size={14}
-                      className="fill-amber-400 text-amber-400"
-                    />
-
-                    <span>{product.rating}</span>
-
-                    <span className="font-normal text-gray-400">
-                      ({product.reviewCount} reviews)
-                    </span>
-
-                  </div>
-
-                  <span>|</span>
-
-                  <span>
-                    📦 {product.reviewCount}+ sold
-                  </span>
-
-                </div>
-
-                {/* Price */}
-
-                <div className="flex items-baseline gap-2 pt-2">
-
-                  <span className="text-3xl font-extrabold text-gray-900">
-                    ₹{product.price}
-                  </span>
-
-                  <span className="text-xs text-gray-500">
-                    + ₹{product.deliveryCharge} delivery
-                  </span>
-
-                </div>
-
-                {/* Location / Delivery / Stock */}
-
-                <div className="flex items-center gap-3 pt-2 text-xs flex-wrap">
-
-                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-3 py-1 rounded-lg">
-                    <MapPin size={12} />
-                    {product.location}
-                  </span>
-
-                  <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-600 px-3 py-1 rounded-lg">
-                    <Truck size={12} />
-                    {product.deliveryTimeMinDays || 2}-3 days
-                  </span>
-
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg font-medium ${
-                      product.stock > 0
-                        ? 'bg-emerald-50 text-emerald-600'
-                        : 'bg-red-50 text-red-600'
-                    }`}
-                  >
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        product.stock > 0
-                          ? 'bg-emerald-500'
-                          : 'bg-red-500'
-                      }`}
-                    />
-
-                    {product.stock > 0
-                      ? `In Stock (${product.stock})`
-                      : 'Out of Stock'}
+                    Usually delivered in{' '}
+                    {product.deliveryTimeMinDays ||
+                      2}
+                    -3 days
                   </span>
 
                 </div>
 
               </div>
 
-            </div>
+              {/* =================================================
+                  HIGHLIGHTS
+              ================================================= */}
 
-            {/* ==================================================
-                NAVIGATION TABS
-            ================================================== */}
+              <div className="py-5">
 
-            <div className="border-b border-gray-200 flex gap-8 text-sm font-medium text-gray-500 overflow-x-auto">
-
-              {[
-                'Overview',
-                'Specifications',
-                'Seller Information',
-                `Reviews (${product.reviewCount})`,
-                'Orders (320)',
-                'Price History',
-              ].map((tab) => (
-
-                <button
-                  type="button"
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`pb-3 relative whitespace-nowrap ${
-                    activeTab === tab
-                      ? 'text-orange-600 font-semibold border-b-2 border-orange-500'
-                      : 'hover:text-gray-700'
-                  }`}
-                >
-                  {tab}
-                </button>
-
-              ))}
-
-            </div>
-
-            {/* ==================================================
-                OVERVIEW
-            ================================================== */}
-
-            {activeTab === 'Overview' && (
-
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                {/* LEFT COLUMN */}
-
-                <div className="lg:col-span-2 space-y-6">
-
-                  {/* Product Description */}
-
-                  <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-
-                    <h3 className="font-bold text-gray-900 text-base">
-                      Product Description
-                    </h3>
-
-                    <p className="text-xs text-gray-600 leading-relaxed">
-                      {product.description ||
-                        defaultProduct.description}
-                    </p>
-
-                    {/* Feature Badges */}
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
-
-                      <FeatureBadge
-                        icon={
-                          <Flame
-                            size={14}
-                            className="text-orange-500"
-                          />
-                        }
-                        text="High Strength"
-                      />
-
-                      <FeatureBadge
-                        icon={
-                          <Shield
-                            size={14}
-                            className="text-orange-500"
-                          />
-                        }
-                        text="Long Durability"
-                      />
-
-                      <FeatureBadge
-                        icon={
-                          <PenTool
-                            size={14}
-                            className="text-orange-500"
-                          />
-                        }
-                        text="Better Finish"
-                      />
-
-                      <FeatureBadge
-                        icon={
-                          <DollarSign
-                            size={14}
-                            className="text-orange-500"
-                          />
-                        }
-                        text="Cost Effective"
-                      />
-
-                    </div>
-
-                    {/* ==================================================
-                        PRODUCT GALLERY
-                    ================================================== */}
-
-                    <div className="pt-4 space-y-3">
-
-                      <h4 className="font-semibold text-gray-900 text-xs">
-                        Product Images
-                      </h4>
-
-                      <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
-
-                        {imagesList.map((imgUrl, index) => (
-
-                          <div
-                            key={`${imgUrl}-${index}`}
-                            onClick={() =>
-                              setPreviewImage(imgUrl)
-                            }
-                            className="relative group border border-gray-200 rounded-xl p-2 bg-gray-50 flex items-center justify-center h-20 cursor-pointer overflow-hidden hover:border-orange-500 transition"
-                          >
-
-                            <img
-                              src={imgUrl}
-                              alt={`${product.name} ${index + 1}`}
-                              className="max-h-full max-w-full object-contain"
-                            />
-
-                            {/* Hover Overlay */}
-
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
-
-                              {/* View */}
-
-                              <span className="p-1 bg-white/80 rounded-full text-gray-800 hover:bg-white">
-                                <Eye size={14} />
-                              </span>
-
-                              {/* Delete */}
-
-                              <button
-                                type="button"
-                                onClick={(event) =>
-                                  handleRemoveImage(
-                                    imgUrl,
-                                    event
-                                  )
-                                }
-                                className="p-1 bg-red-500 rounded-full text-white hover:bg-red-600"
-                                title="Delete Image"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-
-                            </div>
-
-                          </div>
-
-                        ))}
-
-                        {/* Hidden File Input */}
-
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleImageUpload}
-                          accept="image/*"
-                          className="hidden"
-                        />
-
-                        {/* Add Image */}
-
-                        <button
-                          type="button"
-                          onClick={() =>
-                            fileInputRef.current?.click()
-                          }
-                          className="border border-dashed border-gray-300 rounded-xl p-2 hover:bg-gray-50 flex flex-col items-center justify-center gap-1 text-gray-400 h-20 transition"
-                        >
-                          <Plus size={16} />
-
-                          <span className="text-[10px]">
-                            Add Images
-                          </span>
-                        </button>
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                  {/* ==================================================
-                      SPECIFICATIONS PREVIEW
-                  ================================================== */}
-
-                  <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-
-                    <h3 className="font-bold text-gray-900 text-base">
-                      Product Specifications
-                    </h3>
-
-                    <div className="grid grid-cols-2 gap-y-3 text-xs">
-
-                      {Object.entries(
-                        product.specifications ||
-                          defaultProduct.specifications ||
-                          {}
-                      ).map(([key, value]) => (
-
-                        <div key={key}>
-
-                          <span className="text-gray-400">
-                            {key}
-                          </span>
-
-                          <p className="font-medium text-gray-800">
-                            {value}
-                          </p>
-
-                        </div>
-
-                      ))}
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-                {/* ==================================================
-                    RIGHT COLUMN
-                ================================================== */}
-
-                <div className="space-y-6">
-
-                  {/* Product Summary */}
-
-                  <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 text-xs">
-
-                    <h3 className="font-bold text-gray-900 text-base">
-                      Product Summary
-                    </h3>
-
-                    <div className="space-y-3">
-
-                      <SummaryRow
-                        label="Status"
-                        value={
-                          <span
-                            className={`px-2 py-0.5 rounded font-medium ${
-                              product.stock > 0
-                                ? 'bg-emerald-50 text-emerald-600'
-                                : 'bg-red-50 text-red-600'
-                            }`}
-                          >
-                            {product.stock > 0
-                              ? 'In Stock'
-                              : 'Out of Stock'}
-                          </span>
-                        }
-                      />
-
-                      <SummaryRow
-                        label="Product ID"
-                        value={`#${product.id}`}
-                      />
-
-                      <SummaryRow
-                        label="Category"
-                        value={product.category}
-                      />
-
-                      <SummaryRow
-                        label="Brand"
-                        value={product.brand}
-                      />
-
-                      <SummaryRow
-                        label="Weight"
-                        value="50 kg"
-                      />
-
-                      <SummaryRow
-                        label="Min. Order Qty"
-                        value="1 Bag"
-                      />
-
-                      <SummaryRow
-                        label="Added On"
-                        value={
-                          product.createdAt ||
-                          '15 Jan 2024'
-                        }
-                      />
-
-                      <SummaryRow
-                        label="Last Updated"
-                        value="01 Aug 2024"
-                      />
-
-                    </div>
-
-                  </div>
-
-                  {/* Pricing Information */}
-
-                  <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4 text-xs">
-
-                    <h3 className="font-bold text-gray-900 text-base">
-                      Pricing Information
-                    </h3>
-
-                    <div className="space-y-3 pb-3 border-b border-gray-100">
-
-                      <SummaryRow
-                        label="Base Price"
-                        value={`₹${product.price}`}
-                      />
-
-                      <SummaryRow
-                        label="Delivery Charge"
-                        value={`₹${product.deliveryCharge}`}
-                      />
-
-                    </div>
-
-                    <div className="flex justify-between items-center font-bold text-sm text-gray-900 pt-1">
-
-                      <span>Total Price</span>
-
-                      <span className="text-orange-500 text-base">
-                        ₹
-                        {product.price +
-                          product.deliveryCharge}
-                      </span>
-
-                    </div>
-
-                    {/* Buy Now */}
-
-                    <div className="pt-2">
-
-                      <button
-                        type="button"
-                        onClick={handleBuyNow}
-                        disabled={product.stock <= 0}
-                        className={`w-full ${
-                          product.stock > 0
-                            ? 'bg-orange-500 hover:bg-orange-600'
-                            : 'bg-gray-400 cursor-not-allowed'
-                        } text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all`}
-                      >
-
-                        <ShoppingBag size={18} />
-
-                        {product.stock > 0
-                          ? 'Buy Now'
-                          : 'Out of Stock'}
-
-                      </button>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-              </div>
-
-            )}
-
-            {/* ==================================================
-                SPECIFICATIONS TAB
-            ================================================== */}
-
-            {activeTab === 'Specifications' && (
-
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-
-                <h3 className="font-bold text-gray-900 text-base">
-                  Technical Specifications
+                <h3 className="font-bold mb-4">
+                  Highlights
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
 
-                  {Object.entries(
-                    product.specifications ||
-                      defaultProduct.specifications ||
-                      {}
-                  ).map(([key, value]) => (
+                  <FeatureBadge
+                    icon={
+                      <Flame size={15} />
+                    }
+                    text="High Strength"
+                  />
+
+                  <FeatureBadge
+                    icon={
+                      <Shield size={15} />
+                    }
+                    text="Durable"
+                  />
+
+                  <FeatureBadge
+                    icon={
+                      <PenTool size={15} />
+                    }
+                    text="Better Finish"
+                  />
+
+                  <FeatureBadge
+                    icon={
+                      <DollarSign size={15} />
+                    }
+                    text="Cost Effective"
+                  />
+
+                </div>
+
+              </div>
+
+              {/* =================================================
+                  SELLER
+              ================================================= */}
+
+              <div className="border border-gray-200 rounded-xl p-4">
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+
+                  <div className="flex gap-3">
+
+                    <div className="w-12 h-12 bg-[#F5EBDD] rounded-lg flex items-center justify-center text-[#5A2E12]">
+                      <Store size={22} />
+                    </div>
+
+                    <div>
+
+                      <p className="text-xs text-gray-500">
+                        Sold by
+                      </p>
+
+                      <h3 className="font-bold">
+                        {product.seller}
+                      </h3>
+
+                      <p className="text-xs text-green-600">
+                        4.8 ★ Seller Rating
+                      </p>
+
+                    </div>
+
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toast(
+                        'Seller profile opened'
+                      )
+                    }
+                    className="border border-[#5A2E12] text-[#5A2E12] px-4 py-2 rounded-lg text-sm font-bold hover:bg-[#F5EBDD]"
+                  >
+                    View Seller
+                  </button>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* ======================================================
+            PRODUCT TABS
+
+            Related Construction Materials section has been
+            completely removed.
+        ====================================================== */}
+
+        <div className="bg-white border border-gray-200 rounded-xl mt-7">
+
+          {/* TAB HEADER */}
+
+          <div className="flex overflow-x-auto border-b">
+
+            {[
+              'Overview',
+              'Specifications',
+              'Seller Information',
+              `Reviews (${product.reviewCount})`,
+              'Orders (320)',
+              'Price History',
+            ].map((tab) => (
+
+              <button
+                type="button"
+                key={tab}
+                onClick={() =>
+                  setActiveTab(tab)
+                }
+                className={`px-6 py-4 whitespace-nowrap text-sm font-semibold transition ${
+                  activeTab === tab
+                    ? 'text-[#5A2E12] border-b-2 border-[#5A2E12]'
+                    : 'text-gray-500 hover:text-[#5A2E12]'
+                }`}
+              >
+                {tab}
+              </button>
+
+            ))}
+
+          </div>
+
+          {/* ==================================================
+              OVERVIEW
+          ================================================== */}
+
+          {activeTab === 'Overview' && (
+
+            <div className="p-6 grid lg:grid-cols-3 gap-8">
+
+              <div className="lg:col-span-2">
+
+                <h3 className="font-bold text-lg mb-4">
+                  Product Description
+                </h3>
+
+                <p className="text-sm text-gray-600 leading-7">
+                  {product.description ||
+                    defaultProduct.description}
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+
+                  <FeatureBadge
+                    icon={
+                      <Flame size={15} />
+                    }
+                    text="High Strength"
+                  />
+
+                  <FeatureBadge
+                    icon={
+                      <Shield size={15} />
+                    }
+                    text="Durable"
+                  />
+
+                  <FeatureBadge
+                    icon={
+                      <PenTool size={15} />
+                    }
+                    text="Better Finish"
+                  />
+
+                  <FeatureBadge
+                    icon={
+                      <DollarSign size={15} />
+                    }
+                    text="Cost Effective"
+                  />
+
+                </div>
+
+              </div>
+
+              <div>
+
+                <h3 className="font-bold text-lg mb-4">
+                  Product Details
+                </h3>
+
+                <div className="space-y-3 text-sm">
+
+                  <SummaryRow
+                    label="Product ID"
+                    value={`#${product.id}`}
+                  />
+
+                  <SummaryRow
+                    label="Category"
+                    value={product.category}
+                  />
+
+                  <SummaryRow
+                    label="Brand"
+                    value={product.brand}
+                  />
+
+                  <SummaryRow
+                    label="Weight"
+                    value="50 kg"
+                  />
+
+                  <SummaryRow
+                    label="Minimum Order"
+                    value="1 Bag"
+                  />
+
+                  <SummaryRow
+                    label="Location"
+                    value={product.location}
+                  />
+
+                  <SummaryRow
+                    label="Stock"
+                    value={
+                      product.stock > 0
+                        ? `${product.stock} available`
+                        : 'Out of Stock'
+                    }
+                  />
+
+                  <SummaryRow
+                    label="Added On"
+                    value={product.createdAt}
+                  />
+
+                </div>
+
+              </div>
+
+            </div>
+
+          )}
+
+          {/* ==================================================
+              SPECIFICATIONS
+          ================================================== */}
+
+          {activeTab === 'Specifications' && (
+
+            <div className="p-6">
+
+              <h3 className="font-bold text-lg mb-5">
+                Technical Specifications
+              </h3>
+
+              <div className="grid md:grid-cols-2 gap-3">
+
+                {Object.entries(
+                  product.specifications ||
+                    defaultProduct.specifications ||
+                    {}
+                ).map(
+                  ([key, value]) => (
 
                     <div
                       key={key}
-                      className="flex justify-between gap-4 p-3 bg-gray-50 rounded-xl border border-gray-100"
+                      className="flex justify-between gap-4 bg-[#F5F3EF] border border-gray-200 p-4 rounded-lg"
                     >
 
                       <span className="text-gray-500">
                         {key}
                       </span>
 
-                      <span className="font-semibold text-gray-900 text-right">
+                      <span className="font-semibold text-right">
                         {value}
                       </span>
 
                     </div>
 
-                  ))}
-
-                </div>
-
-              </div>
-
-            )}
-
-            {/* ==================================================
-                SELLER INFORMATION
-            ================================================== */}
-
-            {activeTab === 'Seller Information' && (
-
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-
-                <div className="flex items-center gap-4">
-
-                  <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center text-orange-600">
-
-                    <Store size={24} />
-
-                  </div>
-
-                  <div>
-
-                    <h3 className="font-bold text-gray-900 text-base">
-                      {product.seller}
-                    </h3>
-
-                    <p className="text-xs text-gray-500">
-                      Verified Construction Supplier •{' '}
-                      {product.location}
-                    </p>
-
-                  </div>
-
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 text-xs">
-
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-
-                    <span className="text-gray-400 block">
-                      Total Products
-                    </span>
-
-                    <span className="text-base font-bold text-gray-900">
-                      142 Materials
-                    </span>
-
-                  </div>
-
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-
-                    <span className="text-gray-400 block">
-                      Seller Rating
-                    </span>
-
-                    <span className="text-base font-bold text-emerald-600">
-                      4.8 / 5.0 ⭐
-                    </span>
-
-                  </div>
-
-                  <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
-
-                    <span className="text-gray-400 block">
-                      Response Time
-                    </span>
-
-                    <span className="text-base font-bold text-gray-900">
-                      &lt; 2 Hours
-                    </span>
-
-                  </div>
-
-                </div>
+                  )
+                )}
 
               </div>
 
-            )}
+            </div>
 
-            {/* ==================================================
-                REVIEWS TAB
-            ================================================== */}
+          )}
 
-            {activeTab.startsWith('Reviews') && (
+          {/* ==================================================
+              SELLER INFORMATION
+          ================================================== */}
 
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-6">
+          {activeTab === 'Seller Information' && (
 
-                <div className="flex items-center justify-between">
+            <div className="p-6">
 
-                  <h3 className="font-bold text-gray-900 text-base">
-                    Customer Reviews
+              <div className="flex gap-4 items-center">
+
+                <div className="w-14 h-14 bg-[#F5EBDD] rounded-full flex items-center justify-center text-[#5A2E12]">
+                  <Store size={25} />
+                </div>
+
+                <div>
+
+                  <h3 className="font-bold text-lg">
+                    {product.seller}
                   </h3>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toast.success(
-                        'Write review triggered'
-                      )
-                    }
-                    className="bg-orange-500 hover:bg-orange-600 text-white text-xs px-3 py-1.5 rounded-lg font-medium"
-                  >
-                    Write a Review
-                  </button>
+                  <p className="text-sm text-gray-500">
+                    Verified Construction Supplier •{' '}
+                    {product.location}
+                  </p>
 
                 </div>
 
-                <div className="space-y-4">
+              </div>
 
-                  {[
-                    {
-                      author: 'Rajesh Kumar',
-                      rating: 5,
-                      date: '2 days ago',
-                      comment:
-                        'Excellent quality cement. Delivered on time in perfect sealed bags.',
-                    },
-                    {
-                      author: 'Suresh Patel',
-                      rating: 4,
-                      date: '1 week ago',
-                      comment:
-                        'Good strength and finish. Delivery charge was slightly high but overall satisfied.',
-                    },
-                  ].map((review, index) => (
+              <div className="grid md:grid-cols-3 gap-4 mt-6">
+
+                <SellerStat
+                  title="Total Products"
+                  value="142 Materials"
+                />
+
+                <SellerStat
+                  title="Seller Rating"
+                  value="4.8 / 5.0 ★"
+                />
+
+                <SellerStat
+                  title="Response Time"
+                  value="< 2 Hours"
+                />
+
+              </div>
+
+            </div>
+
+          )}
+
+          {/* ==================================================
+              REVIEWS
+          ================================================== */}
+
+          {activeTab.startsWith('Reviews') && (
+
+            <div className="p-6">
+
+              <div className="flex items-center justify-between mb-5">
+
+                <h3 className="font-bold text-lg">
+                  Customer Reviews
+                </h3>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    toast.success(
+                      'Write review opened'
+                    )
+                  }
+                  className="bg-[#5A2E12] hover:bg-[#3F2413] text-white px-4 py-2 rounded-lg text-sm font-semibold"
+                >
+                  Write a Review
+                </button>
+
+              </div>
+
+              <div className="space-y-5">
+
+                {[
+                  {
+                    author: 'Rajesh Kumar',
+                    rating: 5,
+                    date: '2 days ago',
+                    comment:
+                      'Excellent quality cement. Delivered on time in perfect sealed bags.',
+                  },
+                  {
+                    author: 'Suresh Patel',
+                    rating: 4,
+                    date: '1 week ago',
+                    comment:
+                      'Good strength and finish. Overall satisfied with the product.',
+                  },
+                ].map(
+                  (review, index) => (
 
                     <div
                       key={index}
-                      className="border-b border-gray-100 pb-4 space-y-1 text-xs"
+                      className="border-b border-gray-200 pb-5"
                     >
 
-                      <div className="flex justify-between items-center">
+                      <div className="flex justify-between">
 
-                        <span className="font-bold text-gray-900">
-                          {review.author}
-                        </span>
+                        <div>
 
-                        <span className="text-gray-400">
+                          <div className="font-semibold">
+                            {review.author}
+                          </div>
+
+                          <div className="flex mt-1">
+
+                            {Array.from({
+                              length: review.rating,
+                            }).map(
+                              (_, starIndex) => (
+
+                                <Star
+                                  key={starIndex}
+                                  size={14}
+                                  className="fill-[#E8B34B] text-[#E8B34B]"
+                                />
+
+                              )
+                            )}
+
+                          </div>
+
+                        </div>
+
+                        <span className="text-xs text-gray-400">
                           {review.date}
                         </span>
 
                       </div>
 
-                      <div className="flex items-center gap-1 text-amber-400">
-
-                        {Array.from({
-                          length: review.rating,
-                        }).map((_, starIndex) => (
-
-                          <Star
-                            key={starIndex}
-                            size={12}
-                            className="fill-amber-400"
-                          />
-
-                        ))}
-
-                      </div>
-
-                      <p className="text-gray-600 pt-1">
+                      <p className="text-sm text-gray-600 mt-3">
                         {review.comment}
                       </p>
 
                     </div>
 
-                  ))}
-
-                </div>
-
-              </div>
-
-            )}
-
-            {/* ==================================================
-                ORDERS TAB
-            ================================================== */}
-
-            {activeTab.startsWith('Orders') && (
-
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
-
-                <h3 className="font-bold text-gray-900 text-base">
-                  Recent Product Orders
-                </h3>
-
-                <div className="overflow-x-auto">
-
-                  <table className="w-full text-left text-xs text-gray-600">
-
-                    <thead className="bg-gray-50 text-gray-500 uppercase font-semibold">
-
-                      <tr>
-
-                        <th className="p-2.5">
-                          Order ID
-                        </th>
-
-                        <th className="p-2.5">
-                          Buyer
-                        </th>
-
-                        <th className="p-2.5">
-                          Quantity
-                        </th>
-
-                        <th className="p-2.5">
-                          Total Amount
-                        </th>
-
-                        <th className="p-2.5">
-                          Status
-                        </th>
-
-                      </tr>
-
-                    </thead>
-
-                    <tbody className="divide-y divide-gray-100">
-
-                      <tr>
-
-                        <td className="p-2.5 font-medium text-gray-900">
-                          #ORD-9921
-                        </td>
-
-                        <td className="p-2.5">
-                          BuildCorp Industries
-                        </td>
-
-                        <td className="p-2.5">
-                          150 Bags
-                        </td>
-
-                        <td className="p-2.5 font-bold text-gray-900">
-                          ₹52,500
-                        </td>
-
-                        <td className="p-2.5">
-
-                          <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded font-medium">
-                            Delivered
-                          </span>
-
-                        </td>
-
-                      </tr>
-
-                      <tr>
-
-                        <td className="p-2.5 font-medium text-gray-900">
-                          #ORD-9844
-                        </td>
-
-                        <td className="p-2.5">
-                          Metro Infra Ltd
-                        </td>
-
-                        <td className="p-2.5">
-                          500 Bags
-                        </td>
-
-                        <td className="p-2.5 font-bold text-gray-900">
-                          ₹1,75,000
-                        </td>
-
-                        <td className="p-2.5">
-
-                          <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded font-medium">
-                            In Transit
-                          </span>
-
-                        </td>
-
-                      </tr>
-
-                    </tbody>
-
-                  </table>
-
-                </div>
+                  )
+                )}
 
               </div>
 
-            )}
+            </div>
 
-            {/* ==================================================
-                PRICE HISTORY
-            ================================================== */}
+          )}
 
-            {activeTab === 'Price History' && (
+          {/* ==================================================
+              ORDERS
+          ================================================== */}
 
-              <div className="bg-white rounded-2xl border border-gray-200 p-6 space-y-4">
+          {activeTab.startsWith('Orders') && (
 
-                <h3 className="font-bold text-gray-900 text-base">
-                  Historical Price Trends
-                </h3>
+            <div className="p-6 overflow-x-auto">
 
-                <div className="space-y-3 text-xs">
+              <h3 className="font-bold text-lg mb-5">
+                Recent Product Orders
+              </h3>
 
-                  {/* Current Price */}
+              <table className="w-full text-sm">
 
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                <thead>
 
-                    <div className="flex items-center gap-2">
+                  <tr className="bg-[#F5F3EF]">
 
-                      <TrendingDown
-                        className="text-emerald-500"
-                        size={16}
-                      />
+                    <th className="p-3 text-left">
+                      Order ID
+                    </th>
 
-                      <div>
+                    <th className="p-3 text-left">
+                      Buyer
+                    </th>
 
-                        <p className="font-bold text-gray-900">
-                          ₹350 (Current Best Price)
-                        </p>
+                    <th className="p-3 text-left">
+                      Quantity
+                    </th>
 
-                        <p className="text-gray-400 text-[10px]">
-                          Updated Aug 2024
-                        </p>
+                    <th className="p-3 text-left">
+                      Amount
+                    </th>
 
-                      </div>
+                    <th className="p-3 text-left">
+                      Status
+                    </th>
+
+                  </tr>
+
+                </thead>
+
+                <tbody>
+
+                  <tr className="border-b">
+
+                    <td className="p-3 font-semibold">
+                      #ORD-9921
+                    </td>
+
+                    <td className="p-3">
+                      BuildCorp Industries
+                    </td>
+
+                    <td className="p-3">
+                      150 Bags
+                    </td>
+
+                    <td className="p-3 font-bold">
+                      ₹52,500
+                    </td>
+
+                    <td className="p-3 text-green-600 font-semibold">
+                      Delivered
+                    </td>
+
+                  </tr>
+
+                  <tr>
+
+                    <td className="p-3 font-semibold">
+                      #ORD-9844
+                    </td>
+
+                    <td className="p-3">
+                      Metro Infra Ltd
+                    </td>
+
+                    <td className="p-3">
+                      500 Bags
+                    </td>
+
+                    <td className="p-3 font-bold">
+                      ₹1,75,000
+                    </td>
+
+                    <td className="p-3 text-blue-600 font-semibold">
+                      In Transit
+                    </td>
+
+                  </tr>
+
+                </tbody>
+
+              </table>
+
+            </div>
+
+          )}
+
+          {/* ==================================================
+              PRICE HISTORY
+          ================================================== */}
+
+          {activeTab === 'Price History' && (
+
+            <div className="p-6">
+
+              <h3 className="font-bold text-lg mb-5">
+                Historical Price Trends
+              </h3>
+
+              <div className="space-y-3">
+
+                <div className="p-4 bg-green-50 rounded-lg flex justify-between items-center">
+
+                  <div className="flex gap-3">
+
+                    <TrendingDown
+                      className="text-green-600"
+                      size={20}
+                    />
+
+                    <div>
+
+                      <p className="font-bold">
+                        ₹
+                        {product.price.toLocaleString()}{' '}
+                        Current Price
+                      </p>
+
+                      <p className="text-xs text-gray-500">
+                        Current best price
+                      </p>
 
                     </div>
 
-                    <span className="text-emerald-600 font-semibold">
-                      - ₹20 reduction
-                    </span>
-
                   </div>
 
-                  {/* Previous Price */}
+                  <span className="text-green-600 font-bold">
+                    - ₹20
+                  </span>
 
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                </div>
 
-                    <div className="flex items-center gap-2">
+                <div className="p-4 bg-[#F5F3EF] rounded-lg flex justify-between items-center">
 
-                      <TrendingUp
-                        className="text-gray-400"
-                        size={16}
-                      />
+                  <div className="flex gap-3">
 
-                      <div>
+                    <TrendingUp
+                      className="text-gray-400"
+                      size={20}
+                    />
 
-                        <p className="font-bold text-gray-900">
-                          ₹370
-                        </p>
+                    <div>
 
-                        <p className="text-gray-400 text-[10px]">
-                          June 2024
-                        </p>
+                      <p className="font-bold">
+                        ₹370
+                      </p>
 
-                      </div>
+                      <p className="text-xs text-gray-500">
+                        June 2024
+                      </p>
 
                     </div>
 
-                    <span className="text-gray-500 font-medium">
-                      Base rate
-                    </span>
-
                   </div>
+
+                  <span className="text-gray-500">
+                    Previous price
+                  </span>
 
                 </div>
 
               </div>
 
-            )}
+            </div>
 
-          </main>
+          )}
 
         </div>
 
-      </div>
+      </main>
 
-      {/* ========================================================
+      {/* ======================================================
           IMAGE PREVIEW MODAL
-      ======================================================== */}
+      ====================================================== */}
 
       {previewImage && (
 
         <div
-          className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() =>
+            setPreviewImage(null)
+          }
         >
 
           <div
-            className="bg-white rounded-2xl overflow-hidden max-w-2xl w-full shadow-2xl flex flex-col relative"
+            className="bg-white rounded-xl max-w-4xl w-full overflow-hidden shadow-2xl"
             onClick={(event) =>
               event.stopPropagation()
             }
           >
 
-            {/* Modal Header */}
+            {/* HEADER */}
 
-            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
+            <div className="flex justify-between items-center p-4 border-b">
 
-              <h4 className="font-bold text-gray-900 text-sm">
-                Image Preview
-              </h4>
+              <h3 className="font-bold">
+                Product Image
+              </h3>
 
               <button
                 type="button"
                 onClick={() =>
                   setPreviewImage(null)
                 }
-                className="p-1 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                title="Close"
+                className="p-2 hover:bg-gray-100 rounded-full"
+                aria-label="Close image preview"
               >
                 <X size={20} />
               </button>
 
             </div>
 
-            {/* Modal Body */}
+            {/* IMAGE */}
 
-            <div className="p-6 bg-gray-50 flex items-center justify-center max-h-[60vh]">
+            <div className="p-6 bg-[#F5F3EF] flex justify-center">
 
               <img
                 src={previewImage}
                 alt="Product Preview"
-                className="max-h-[50vh] max-w-full object-contain rounded-lg"
+                className="max-h-[70vh] max-w-full object-contain"
               />
 
             </div>
 
-            {/* Modal Footer */}
+            {/* FOOTER */}
 
-            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-100 bg-white">
+            <div className="p-4 flex justify-between">
 
               <button
                 type="button"
                 onClick={() =>
-                  handleRemoveImage(previewImage)
+                  handleRemoveImage(
+                    previewImage
+                  )
                 }
-                className="flex items-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-xl text-xs font-semibold transition"
+                className="flex items-center gap-2 bg-red-50 text-red-600 hover:bg-red-100 px-4 py-2 rounded-lg font-semibold text-sm"
               >
                 <Trash2 size={16} />
                 Remove Image
@@ -1516,7 +1523,7 @@ export const ProductDetailsPage = () => {
                 onClick={() =>
                   setPreviewImage(null)
                 }
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-5 py-2 rounded-xl text-xs font-semibold transition"
+                className="bg-[#5A2E12] hover:bg-[#3F2413] text-white px-5 py-2 rounded-lg font-semibold text-sm"
               >
                 Close
               </button>
@@ -1533,11 +1540,43 @@ export const ProductDetailsPage = () => {
   );
 };
 
-/*
- * ==============================================================
- * FEATURE BADGE
- * ==============================================================
- */
+/* ============================================================
+   OFFER COMPONENT
+============================================================ */
+
+const Offer = ({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) => {
+  return (
+    <div className="flex gap-3">
+
+      <div className="w-7 h-7 rounded-full bg-[#F5EBDD] text-[#5A2E12] flex items-center justify-center shrink-0">
+        <TagIcon />
+      </div>
+
+      <div>
+
+        <p className="text-sm font-bold text-gray-900">
+          {title}
+        </p>
+
+        <p className="text-xs text-gray-500 mt-0.5">
+          {description}
+        </p>
+
+      </div>
+
+    </div>
+  );
+};
+
+/* ============================================================
+   FEATURE BADGE
+============================================================ */
 
 const FeatureBadge = ({
   icon,
@@ -1545,21 +1584,25 @@ const FeatureBadge = ({
 }: {
   icon: ReactNode;
   text: string;
-}) => (
-  <div className="flex items-center gap-2 bg-orange-50/50 border border-orange-100 p-2.5 rounded-xl">
-    {icon}
+}) => {
+  return (
+    <div className="border border-[#E8D5B5] rounded-lg p-3 flex items-center gap-2 bg-[#FDF9F3]">
 
-    <span className="text-xs font-semibold text-gray-800">
-      {text}
-    </span>
-  </div>
-);
+      <span className="text-[#5A2E12]">
+        {icon}
+      </span>
 
-/*
- * ==============================================================
- * SUMMARY ROW
- * ==============================================================
- */
+      <span className="text-xs font-semibold text-gray-800">
+        {text}
+      </span>
+
+    </div>
+  );
+};
+
+/* ============================================================
+   SUMMARY ROW
+============================================================ */
 
 const SummaryRow = ({
   label,
@@ -1567,40 +1610,73 @@ const SummaryRow = ({
 }: {
   label: string;
   value: ReactNode;
-}) => (
-  <div className="flex justify-between items-center gap-4">
-    <span className="text-gray-400">
-      {label}
-    </span>
+}) => {
+  return (
+    <div className="flex justify-between gap-4 border-b border-gray-100 pb-2">
 
-    <span className="font-semibold text-gray-800 text-right">
-      {value}
-    </span>
-  </div>
-);
+      <span className="text-gray-500">
+        {label}
+      </span>
 
-/*
- * ==============================================================
- * MENU ICON
- * ==============================================================
- */
+      <span className="font-semibold text-right text-gray-800">
+        {value}
+      </span>
 
-const MenuIcon = () => (
-  <svg
-    width="20"
-    height="20"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <line x1="4" x2="20" y1="12" y2="12" />
-    <line x1="4" x2="20" y1="6" y2="6" />
-    <line x1="4" x2="20" y1="18" y2="18" />
-  </svg>
-);
+    </div>
+  );
+};
+
+/* ============================================================
+   SELLER STAT
+============================================================ */
+
+const SellerStat = ({
+  title,
+  value,
+}: {
+  title: string;
+  value: string;
+}) => {
+  return (
+    <div className="bg-[#F5F3EF] border border-gray-200 rounded-lg p-4">
+
+      <p className="text-xs text-gray-500">
+        {title}
+      </p>
+
+      <p className="font-bold text-lg text-gray-900 mt-1">
+        {value}
+      </p>
+
+    </div>
+  );
+};
+
+/* ============================================================
+   TAG ICON
+============================================================ */
+
+const TagIcon = () => {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M20.59 13.41 11 3H4v7l9.59 9.59a2 2 0 0 0 2.82 0l4.18-4.18a2 2 0 0 0 0-2.82Z" />
+
+      <circle
+        cx="7.5"
+        cy="7.5"
+        r="1"
+      />
+    </svg>
+  );
+};
 
 export default ProductDetailsPage;

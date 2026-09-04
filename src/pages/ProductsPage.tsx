@@ -1,11 +1,13 @@
+
 // src/pages/ProductsPage.tsx
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
   Search, Filter, SlidersHorizontal, X,
-  Star, MapPin, Truck,
-  Eye, GitCompare, Heart, TrendingUp, Zap, Package
+  Star, MapPin, Truck, Eye, GitCompare,
+  Heart, TrendingUp, Zap, Package, 
+  ChevronRight, ArrowUpDown
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -16,6 +18,7 @@ export interface Product {
   brand: string;
   category: string;
   price: number;
+  originalPrice?: number;
   deliveryCharge: number;
   seller: string;
   sellerId: string;
@@ -42,31 +45,31 @@ const STORAGE_KEYS = {
 const initialProducts: Product[] = [
   {
     id: 'p1', name: 'UltraTech Cement (50kg)', brand: 'UltraTech', category: 'Cement',
-    price: 350, deliveryCharge: 50, seller: 'ABC Constructions', sellerId: 's1',
+    price: 350, originalPrice: 390, deliveryCharge: 50, seller: 'ABC Constructions', sellerId: 's1',
     rating: 4.5, reviewCount: 1250, location: 'Mumbai', image: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=500',
     stock: 5000, isBestPrice: true, isRecommended: true, deliveryTimeMinDays: 2, createdAt: new Date().toISOString()
   },
   {
     id: 'p2', name: 'TATA TMT Steel Bars (12mm)', brand: 'TATA', category: 'Steel',
-    price: 750, deliveryCharge: 100, seller: 'XYZ Enterprises', sellerId: 's2',
+    price: 750, originalPrice: 820, deliveryCharge: 100, seller: 'XYZ Enterprises', sellerId: 's2',
     rating: 4.8, reviewCount: 850, location: 'Delhi', image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500',
     stock: 2500, isBestPrice: false, isRecommended: true, deliveryTimeMinDays: 3, createdAt: new Date().toISOString()
   },
   {
-    id: 'p3', name: 'Asian Paints Royale', brand: 'Asian Paints', category: 'Paint',
-    price: 2200, deliveryCharge: 80, seller: 'PQR Builders', sellerId: 's3',
+    id: 'p3', name: 'Asian Paints Royale (20L)', brand: 'Asian Paints', category: 'Paint',
+    price: 2200, originalPrice: 2500, deliveryCharge: 80, seller: 'PQR Builders', sellerId: 's3',
     rating: 4.3, reviewCount: 430, location: 'Bangalore', image: 'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500',
     stock: 0, isBestPrice: false, isRecommended: false, deliveryTimeMinDays: 4, createdAt: new Date().toISOString()
   },
   {
     id: 'p4', name: 'JCB 3DX Backhoe Loader', brand: 'JCB', category: 'Equipment',
-    price: 8500, deliveryCharge: 1500, seller: 'JCB Rentals', sellerId: 's4',
+    price: 8500, originalPrice: 9000, deliveryCharge: 1500, seller: 'JCB Rentals', sellerId: 's4',
     rating: 4.2, reviewCount: 12, location: 'Ahmedabad', image: 'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=500',
     stock: 5, isBestPrice: true, isRecommended: false, deliveryTimeMinDays: 5, createdAt: new Date().toISOString()
   },
   {
-    id: 'p5', name: 'Birla White Putty', brand: 'Birla', category: 'Paint',
-    price: 450, deliveryCharge: 30, seller: 'Singh Traders', sellerId: 's5',
+    id: 'p5', name: 'Birla White Wall Putty (40kg)', brand: 'Birla', category: 'Paint',
+    price: 450, originalPrice: 500, deliveryCharge: 30, seller: 'Singh Traders', sellerId: 's5',
     rating: 4.6, reviewCount: 320, location: 'Pune', image: 'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=500',
     stock: 1200, isBestPrice: false, isRecommended: false, deliveryTimeMinDays: 2, createdAt: new Date().toISOString()
   }
@@ -79,6 +82,15 @@ const loadProducts = (): Product[] => {
   localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(initialProducts));
   return initialProducts;
 };
+
+// CATEGORY DEFINITIONS FOR TOP BAR
+const CATEGORIES = [
+  { id: 'all', name: 'All Categories', icon: '🏗️' },
+  { id: 'Cement', name: 'Cement & Concrete', icon: '🧱' },
+  { id: 'Steel', name: 'Steel & TMT', icon: '⚙️' },
+  { id: 'Paint', name: 'Paints & Finishes', icon: '🎨' },
+  { id: 'Equipment', name: 'Heavy Machinery', icon: '🚜' }
+];
 
 // ==================== CUSTOM HOOKS ====================
 const useWishlist = () => {
@@ -122,9 +134,7 @@ const useCompare = () => {
     setCompareIds(prev => prev.filter(i => i !== id));
   };
 
-  const clearCompare = () => setCompareIds([]);
-
-  return { compareIds, addToCompare, removeFromCompare, clearCompare };
+  return { compareIds, addToCompare, removeFromCompare };
 };
 
 const useSearchHistory = () => {
@@ -170,33 +180,108 @@ const ProductCard = ({
   onViewDetails
 }: ProductCardProps) => {
   return (
-    <motion.div whileHover={{ y: -5 }} className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all relative">
-      {product.isBestPrice && <span className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 z-10"><Zap className="w-3 h-3" /> Best Price</span>}
-      {product.isRecommended && !product.isBestPrice && <span className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1 z-10"><TrendingUp className="w-3 h-3" /> Recommended</span>}
-      <div className="relative h-48 overflow-hidden">
-        <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-110 transition" />
-        {product.stock === 0 && <div className="absolute inset-0 bg-black/60 flex items-center justify-center"><span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm">Out of Stock</span></div>}
-      </div>
-      <div className="p-4">
-        <div className="flex justify-between items-start">
-          <div><h3 className="font-bold text-secondary-500 line-clamp-1">{product.name}</h3><p className="text-sm text-gray-500">{product.brand}</p></div>
-          <div className="flex gap-1">
-            <button onClick={onWishlist} className="p-1 rounded-full hover:bg-gray-100">{isWishlisted ? <Heart className="w-5 h-5 fill-red-500 text-red-500" /> : <Heart className="w-5 h-5 text-gray-400" />}</button>
-            <button onClick={onCompare} className="p-1 rounded-full hover:bg-gray-100"><GitCompare className={`w-5 h-5 ${isCompared ? 'text-secondary-500' : 'text-gray-400'}`} /></button>
+    <div className="bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow duration-200 flex flex-col justify-between group min-w-0 h-full">
+      <div>
+        {/* Product Image & Badges */}
+        <div className="relative h-40 sm:h-44 md:h-48 lg:h-44 xl:h-48 2xl:h-52 bg-gray-100 overflow-hidden">
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+          <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
+            {product.isBestPrice && (
+              <span className="bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow flex items-center gap-1 uppercase">
+                <Zap className="w-3 h-3" /> Best Price
+              </span>
+            )}
+            {product.isRecommended && !product.isBestPrice && (
+              <span className="bg-amber-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow flex items-center gap-1 uppercase">
+                <TrendingUp className="w-3 h-3" /> Top Rated
+              </span>
+            )}
+          </div>
+
+          {/* Action Overlay */}
+          <div className="absolute top-2 right-2 flex flex-col gap-1.5 z-10">
+            <button
+              onClick={onWishlist}
+              className="p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-700 shadow backdrop-blur-sm transition"
+              title="Wishlist"
+            >
+              <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-red-500 text-red-500' : 'text-gray-600'}`} />
+            </button>
+            <button
+              onClick={onCompare}
+              className={`p-1.5 rounded-full bg-white/80 hover:bg-white shadow backdrop-blur-sm transition ${isCompared ? 'text-amber-700 font-bold' : 'text-gray-600'}`}
+              title="Compare"
+            >
+              <GitCompare className="w-4 h-4" />
+            </button>
+          </div>
+
+          {product.stock === 0 && (
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px] flex items-center justify-center">
+              <span className="bg-red-600 text-white px-3 py-1 rounded text-xs font-semibold uppercase tracking-wider">
+                Out of Stock
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Content Section */}
+        <div className="p-3 sm:p-3.5 md:p-4">
+          <div className="text-[11px] text-amber-800 uppercase font-semibold tracking-wider">
+            {product.brand}
+          </div>
+          <h3 className="font-semibold text-gray-900 text-sm sm:text-[15px] line-clamp-2 mt-0.5 group-hover:text-amber-900 transition-colors">
+            {product.name}
+          </h3>
+
+          {/* Rating Badge */}
+          <div className="flex items-center gap-1.5 mt-2">
+            <span className="bg-emerald-700 text-white text-xs font-bold px-1.5 py-0.5 rounded flex items-center gap-0.5">
+              {product.rating} <Star className="w-3 h-3 fill-white" />
+            </span>
+            <span className="text-xs text-gray-500 font-medium">({product.reviewCount})</span>
+          </div>
+
+          {/* Price Block */}
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-lg font-bold text-gray-900">₹{product.price.toLocaleString()}</span>
+            {product.originalPrice && (
+              <span className="text-xs text-gray-400 line-through">₹{product.originalPrice.toLocaleString()}</span>
+            )}
+          </div>
+
+          <div className="text-xs text-gray-500 mt-0.5">
+            + ₹{product.deliveryCharge} delivery charge
+          </div>
+
+          {/* Shipping Details */}
+          <div className="mt-3 pt-2 border-t border-gray-100 flex flex-col gap-1 text-xs text-gray-600">
+            <div className="flex items-center gap-1">
+              <Truck className="w-3.5 h-3.5 text-gray-400" />
+              <span>Ships in <strong>{product.deliveryTimeMinDays} days</strong></span>
+            </div>
+            <div className="flex items-center gap-1">
+              <MapPin className="w-3.5 h-3.5 text-gray-400" />
+              <span className="truncate">{product.location} • {product.seller}</span>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 mt-1"><Star className="w-4 h-4 fill-yellow-400 text-yellow-400" /><span className="text-sm font-medium">{product.rating}</span><span className="text-xs text-gray-500">({product.reviewCount})</span></div>
-        <div className="mt-2"><span className="text-xl font-bold text-secondary-500">₹{product.price.toLocaleString()}</span><span className="text-sm text-gray-500 ml-1">+ ₹{product.deliveryCharge} delivery</span></div>
-        <div className="flex items-center gap-1 text-xs text-gray-500 mt-1"><MapPin className="w-3 h-3" />{product.location} | <Truck className="w-3 h-3" />{product.deliveryTimeMinDays} days</div>
-        <p className="text-xs text-gray-600 mt-2">by {product.seller}</p>
+      </div>
+
+      {/* Button Action */}
+      <div className="p-3 sm:p-3.5 md:p-4 pt-0 sm:pt-0 md:pt-0">
         <button
           onClick={onViewDetails}
-          className="mt-3 w-full bg-secondary-500 text-white py-2 rounded-lg text-sm hover:bg-secondary-600 transition flex items-center justify-center gap-1"
+          className="w-full bg-[#523519] hover:bg-[#3d2414] text-white py-2 rounded text-xs font-semibold transition flex items-center justify-center gap-1.5"
         >
-          <Eye className="w-4 h-4" /> View Details
+          <Eye className="w-3.5 h-3.5" /> View Product
         </button>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
@@ -226,7 +311,7 @@ const ProductsPage = () => {
   const [visibleCount, setVisibleCount] = useState(12);
   const [hasMore, setHasMore] = useState(true);
 
-  // Load products (with auto‑sync)
+  // Load products (with auto-sync)
   useEffect(() => {
     const load = () => {
       const allProducts = loadProducts();
@@ -234,7 +319,6 @@ const ProductsPage = () => {
       setLoading(false);
     };
     load();
-    // Listen for storage changes (when seller adds product)
     const handleStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEYS.PRODUCTS) load();
     };
@@ -246,32 +330,22 @@ const ProductsPage = () => {
   useEffect(() => {
     let filtered = [...products];
 
-    // Category
     if (selectedCategory !== 'all') filtered = filtered.filter(p => p.category === selectedCategory);
 
-    // Search
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(p => p.name.toLowerCase().includes(term) || p.brand.toLowerCase().includes(term));
     }
 
-    // Price
     filtered = filtered.filter(p => p.price >= priceRange.min && p.price <= priceRange.max);
 
-    // Brand
     if (selectedBrands.length) filtered = filtered.filter(p => selectedBrands.includes(p.brand));
-
-    // Location
     if (selectedLocation) filtered = filtered.filter(p => p.location === selectedLocation);
-
-    // Delivery time
     if (maxDeliveryDays) filtered = filtered.filter(p => (p.deliveryTimeMinDays || 999) <= maxDeliveryDays);
 
-    // Availability
     if (availability === 'inStock') filtered = filtered.filter(p => p.stock > 0);
     if (availability === 'outOfStock') filtered = filtered.filter(p => p.stock === 0);
 
-    // Sorting
     switch (sortBy) {
       case 'price_asc': filtered.sort((a, b) => a.price - b.price); break;
       case 'price_desc': filtered.sort((a, b) => b.price - a.price); break;
@@ -308,152 +382,264 @@ const ProductsPage = () => {
     setSearchTerm('');
   };
 
-  const categories = ['all', ...new Set(products.map(p => p.category))];
   const brands = [...new Set(products.map(p => p.brand))];
   const locations = [...new Set(products.map(p => p.location))];
 
   return (
-    <div className="min-h-screen bg-primary-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-secondary-500">Construction Materials</h1>
-          <p className="text-gray-600">Find the best quality products at competitive prices</p>
-        </div>
+    <div className="min-h-screen w-full overflow-x-hidden bg-gray-100 font-sans text-gray-800">
+      
+     {/* 1. TOP E-COMMERCE NAVBAR */}
+<header className="bg-[#523519] text-white sticky top-0 z-40 shadow-md">
+  <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3 lg:gap-4">
+    
+    {/* Combined Logo & Brand */}
+    {/* <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => navigate('/')}>
+      <div className="w-9 h-9 rounded bg-[#3d2414] border border-[#6d4926] flex items-center justify-center font-bold text-amber-100 text-sm shadow-sm">
+        CT
+      </div>
+      <div>
+        <span className="font-extrabold text-base tracking-tight text-amber-50 leading-none block">
+          CASA TERMINAL
+        </span>
+        <span className="text-[10px] text-amber-200 tracking-wider font-semibold">
+          MARKETPLACE
+        </span>
+      </div>
+    </div> */}
 
-        {/* Search Bar with suggestions */}
-        <form onSubmit={handleSearch} className="relative max-w-2xl mx-auto mb-8">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search products, brands..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onFocus={() => setShowSearchSuggestions(true)}
-              onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
-              className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-secondary-500"
-            />
-          </div>
-          <AnimatePresence>
-            {showSearchSuggestions && history.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="absolute z-20 w-full mt-2 bg-white rounded-xl shadow-lg border">
-                <div className="p-2">
-                  <div className="flex justify-between items-center px-3 py-2">
-                    <span className="text-xs font-medium text-gray-500">Recent searches</span>
-                    <button onClick={clearHistory} className="text-xs text-red-500">Clear</button>
-                  </div>
-                  {history.map(term => (
-                    <button key={term} onClick={() => { setSearchTerm(term); addSearchTerm(term); setShowSearchSuggestions(false); }} className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded-lg">
-                      {term}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </form>
+    {/* Search Box */}
+    <div className="w-full sm:flex-1 sm:max-w-2xl relative order-1 sm:order-none">
+      <form onSubmit={handleSearch} className="flex w-full">
+        <input
+          type="text"
+          placeholder="Search materials, brands, equipment..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          onFocus={() => setShowSearchSuggestions(true)}
+          onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 200)}
+          className="w-full min-w-0 px-3 sm:px-4 py-2.5 sm:py-2 rounded-l-md text-xs sm:text-sm text-gray-900 bg-white focus:outline-none"
+        />
+        <button type="submit" className="bg-[#3d2414] hover:bg-[#2b190c] px-4 sm:px-5 rounded-r-md flex items-center justify-center text-amber-100 transition shrink-0">
+          <Search className="w-4 h-4" />
+        </button>
+      </form>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* LEFT SIDEBAR – Sticky Filters (Desktop) */}
-          <aside className="hidden lg:block w-72 flex-shrink-0 sticky top-24 h-fit bg-white rounded-xl shadow-md p-5 space-y-5">
-            <div className="flex justify-between items-center">
-              <h3 className="font-semibold flex items-center gap-2"><SlidersHorizontal className="w-4 h-4" /> Filters</h3>
-              <button onClick={clearFilters} className="text-xs text-secondary-500">Clear all</button>
+      {/* Search Suggestions */}
+      <AnimatePresence>
+        {showSearchSuggestions && history.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, y: 5 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0 }} 
+            className="absolute z-50 w-full mt-1 bg-white rounded-md shadow-xl border border-gray-200 text-gray-800"
+          >
+            <div className="p-2">
+              <div className="flex justify-between items-center px-2 py-1 border-b text-xs font-semibold text-gray-500">
+                <span>Recent Searches</span>
+                <button onClick={clearHistory} className="text-red-600 hover:underline">Clear</button>
+              </div>
+              {history.map(term => (
+                <button
+                  key={term}
+                  onClick={() => { setSearchTerm(term); addSearchTerm(term); setShowSearchSuggestions(false); }}
+                  className="block w-full text-left px-3 py-2 text-sm hover:bg-gray-100 rounded"
+                >
+                  {term}
+                </button>
+              ))}
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
 
-            {/* Category */}
-            <div>
-              <label className="block text-sm font-medium mb-2">Category</label>
-              <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full p-2 border rounded-lg">
-                {categories.map(cat => <option key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</option>)}
-              </select>
+  </div>
+
+  {/* 2. HORIZONTAL CATEGORY BAR */}
+  <div className="bg-[#3d2414] border-t border-[#6d4926]/40 overflow-x-auto scrollbar-none">
+    <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 lg:px-8 flex items-center gap-1 py-1.5 text-[10px] sm:text-xs font-medium text-amber-100 whitespace-nowrap overflow-x-auto scrollbar-none">
+      {CATEGORIES.map(cat => (
+        <button
+          key={cat.id}
+          onClick={() => setSelectedCategory(cat.id)}
+          className={`px-3 sm:px-3.5 py-1.5 rounded-full flex items-center gap-1.5 transition shrink-0 ${selectedCategory === cat.id ? 'bg-[#523519] text-white font-bold shadow-inner' : 'hover:bg-[#523519]/50'}`}
+        >
+          <span>{cat.icon}</span>
+          <span>{cat.name}</span>
+        </button>
+      ))}
+    </div>
+  </div>
+</header>
+
+      {/* Breadcrumb Area */}
+      <div className="bg-white border-b border-gray-200 text-xs text-gray-500">
+        <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-2 flex items-center gap-1 min-w-0">
+          <span className="cursor-pointer hover:underline" onClick={() => navigate('/')}>Home</span>
+          <ChevronRight className="w-3 h-3 text-gray-400" />
+          <span className="font-semibold text-gray-800">Construction Store</span>
+        </div>
+      </div>
+
+      {/* Main Content Layout */}
+      <div className="w-full max-w-[1600px] mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-5 lg:py-6">
+        <div className="flex flex-col lg:flex-row gap-4 lg:gap-5 xl:gap-6 items-stretch">
+
+          {/* LEFT SIDEBAR: DESKTOP FILTERS */}
+          <aside className="hidden lg:block w-60 xl:w-64 2xl:w-72 flex-shrink-0 bg-white rounded-lg border border-gray-200 p-4 h-fit sticky top-28 space-y-5 text-xs">
+            <div className="flex justify-between items-center pb-3 border-b">
+              <h3 className="font-bold text-sm text-gray-900 flex items-center gap-1.5">
+                <SlidersHorizontal className="w-4 h-4" /> Filters
+              </h3>
+              <button onClick={clearFilters} className="text-amber-800 font-semibold hover:underline">
+                Reset All
+              </button>
             </div>
 
             {/* Price Range */}
             <div>
-              <label className="block text-sm font-medium mb-2">Price Range (₹)</label>
-              <div className="flex gap-2">
-                <input type="number" placeholder="Min" value={priceRange.min} onChange={e => setPriceRange({ ...priceRange, min: +e.target.value })} className="w-1/2 p-2 border rounded-lg" />
-                <input type="number" placeholder="Max" value={priceRange.max} onChange={e => setPriceRange({ ...priceRange, max: +e.target.value })} className="w-1/2 p-2 border rounded-lg" />
+              <label className="font-bold text-gray-800 mb-2 block">Price Range (₹)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  placeholder="Min"
+                  value={priceRange.min}
+                  onChange={e => setPriceRange({ ...priceRange, min: +e.target.value })}
+                  className="w-1/2 p-1.5 border border-gray-300 rounded focus:outline-none focus:border-[#523519]"
+                />
+                <span className="text-gray-400">-</span>
+                <input
+                  type="number"
+                  placeholder="Max"
+                  value={priceRange.max}
+                  onChange={e => setPriceRange({ ...priceRange, max: +e.target.value })}
+                  className="w-1/2 p-1.5 border border-gray-300 rounded focus:outline-none focus:border-[#523519]"
+                />
               </div>
             </div>
 
-            {/* Brand */}
+            {/* Brands */}
             <div>
-              <label className="block text-sm font-medium mb-2">Brand</label>
-              <div className="space-y-1 max-h-40 overflow-y-auto">
+              <label className="font-bold text-gray-800 mb-2 block">Brand</label>
+              <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                 {brands.map(brand => (
-                  <label key={brand} className="flex items-center gap-2">
-                    <input type="checkbox" checked={selectedBrands.includes(brand)} onChange={e => setSelectedBrands(e.target.checked ? [...selectedBrands, brand] : selectedBrands.filter(b => b !== brand))} />
-                    <span className="text-sm">{brand}</span>
+                  <label key={brand} className="flex items-center gap-2 cursor-pointer text-gray-700 hover:text-gray-900">
+                    <input
+                      type="checkbox"
+                      checked={selectedBrands.includes(brand)}
+                      onChange={e => setSelectedBrands(e.target.checked ? [...selectedBrands, brand] : selectedBrands.filter(b => b !== brand))}
+                      className="rounded border-gray-300 accent-[#523519]"
+                    />
+                    <span>{brand}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            {/* Location */}
+            {/* Location Filter */}
             <div>
-              <label className="block text-sm font-medium mb-2">Location</label>
-              <select value={selectedLocation} onChange={e => setSelectedLocation(e.target.value)} className="w-full p-2 border rounded-lg">
-                <option value="">All</option>
-                {locations.map(loc => <option key={loc}>{loc}</option>)}
+              <label className="font-bold text-gray-800 mb-2 block">Location</label>
+              <select
+                value={selectedLocation}
+                onChange={e => setSelectedLocation(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-[#523519]"
+              >
+                <option value="">All Locations</option>
+                {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
               </select>
             </div>
 
-            {/* Delivery Time */}
+            {/* Delivery Speed */}
             <div>
-              <label className="block text-sm font-medium mb-2">Max Delivery Days</label>
-              <select value={maxDeliveryDays || ''} onChange={e => setMaxDeliveryDays(e.target.value ? +e.target.value : null)} className="w-full p-2 border rounded-lg">
-                <option value="">Any</option>
-                <option value="2">Within 2 days</option>
-                <option value="5">Within 5 days</option>
-                <option value="7">Within 7 days</option>
+              <label className="font-bold text-gray-800 mb-2 block">Delivery Days</label>
+              <select
+                value={maxDeliveryDays || ''}
+                onChange={e => setMaxDeliveryDays(e.target.value ? +e.target.value : null)}
+                className="w-full p-2 border border-gray-300 rounded focus:outline-none focus:border-[#523519]"
+              >
+                <option value="">Any Time</option>
+                <option value="2">Within 2 Days</option>
+                <option value="5">Within 5 Days</option>
+                <option value="7">Within 7 Days</option>
               </select>
             </div>
 
             {/* Availability */}
             <div>
-              <label className="block text-sm font-medium mb-2">Availability</label>
-              <div className="flex gap-3">
+              <label className="font-bold text-gray-800 mb-2 block">Availability</label>
+              <div className="flex flex-col gap-1.5">
                 {(['all', 'inStock', 'outOfStock'] as const).map(opt => (
-                  <button key={opt} onClick={() => setAvailability(opt)} className={`px-3 py-1 text-sm rounded-full ${availability === opt ? 'bg-secondary-500 text-white' : 'bg-gray-100'}`}>
-                    {opt === 'all' ? 'All' : opt === 'inStock' ? 'In Stock' : 'Out of Stock'}
-                  </button>
+                  <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="availability"
+                      checked={availability === opt}
+                      onChange={() => setAvailability(opt)}
+                      className="accent-[#523519]"
+                    />
+                    <span className="capitalize">{opt === 'all' ? 'All Items' : opt === 'inStock' ? 'In Stock Only' : 'Out of Stock'}</span>
+                  </label>
                 ))}
               </div>
             </div>
           </aside>
 
-          {/* RIGHT CONTENT */}
-          <div className="flex-1">
-            {/* Top bar: Sorting + Mobile filter button */}
-            <div className="flex justify-between items-center mb-5">
-              <div className="text-sm text-gray-500">{filteredProducts.length} products found</div>
-              <div className="flex gap-2">
-                <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} className="p-2 border rounded-lg text-sm">
-                  <option value="recommended">Recommended</option>
+          {/* RIGHT COLUMN: PRODUCT GRID & CONTROL BAR */}
+          <main className="flex-1 min-w-0 w-full">
+            
+            {/* Top Toolbar */}
+            <div className="bg-white p-3 sm:p-3.5 rounded-lg border border-gray-200 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="text-gray-600 font-medium">
+                Showing <span className="font-bold text-gray-900">{filteredProducts.length}</span> materials
+              </div>
+
+              <div className="w-full sm:w-auto flex flex-wrap items-center justify-between sm:justify-end gap-2">
+                <span className="text-gray-500 font-medium flex items-center gap-1">
+                  <ArrowUpDown className="w-3.5 h-3.5" /> Sort By:
+                </span>
+                <select
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as any)}
+                  className="w-full sm:w-auto max-w-full p-2 border border-gray-300 rounded bg-white font-semibold text-gray-800 focus:outline-none text-xs"
+                >
+                  <option value="recommended">Featured / Recommended</option>
                   <option value="price_asc">Price: Low to High</option>
                   <option value="price_desc">Price: High to Low</option>
-                  <option value="fastDelivery">Fast Delivery</option>
-                  <option value="popular">Popular</option>
+                  <option value="fastDelivery">Fastest Delivery</option>
+                  <option value="popular">Most Popular</option>
                 </select>
-                <button onClick={() => setShowMobileFilters(true)} className="lg:hidden flex items-center gap-2 px-3 py-2 bg-white border rounded-lg">
-                  <Filter className="w-4 h-4" /> Filters
+
+                <button
+                  onClick={() => setShowMobileFilters(true)}
+                  className="lg:hidden flex items-center gap-1 px-3 py-1.5 bg-gray-100 border border-gray-300 rounded font-semibold text-gray-700"
+                >
+                  <Filter className="w-3.5 h-3.5" /> Filter
                 </button>
               </div>
             </div>
 
-            {/* Product Grid */}
+            {/* Product Grid State Handling */}
             {loading ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                {[...Array(6)].map((_, i) => <div key={i} className="h-80 bg-gray-200 animate-pulse rounded-xl" />)}
+              <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="h-72 sm:h-80 bg-gray-200 animate-pulse rounded-lg" />
+                ))}
               </div>
             ) : filteredProducts.length === 0 ? (
-              <div className="text-center py-12"><Package className="w-16 h-16 text-gray-300 mx-auto mb-4" /><h3>No products found</h3><button onClick={clearFilters} className="mt-4 text-secondary-500">Clear filters</button></div>
+              <div className="bg-white rounded-lg border border-gray-200 p-6 sm:p-10 lg:p-12 text-center">
+                <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <h3 className="text-base font-bold text-gray-800">No matching products found</h3>
+                <p className="text-xs text-gray-500 mt-1">Try adjusting your active search terms or category filters.</p>
+                <button
+                  onClick={clearFilters}
+                  className="mt-4 px-4 py-2 bg-[#523519] text-white rounded text-xs font-semibold hover:bg-[#3d2414] transition"
+                >
+                  Reset All Filters
+                </button>
+              </div>
             ) : (
               <>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
                   {filteredProducts.slice(0, visibleCount).map(product => (
                     <ProductCard
                       key={product.id}
@@ -466,37 +652,115 @@ const ProductsPage = () => {
                     />
                   ))}
                 </div>
+
                 {hasMore && (
                   <div className="flex justify-center mt-8">
-                    <button onClick={loadMore} className="px-6 py-2 bg-white border rounded-lg hover:bg-gray-50">Load More</button>
+                    <button
+                      onClick={loadMore}
+                      className="px-6 py-2.5 bg-white border border-gray-300 text-gray-800 text-xs font-bold rounded shadow-sm hover:bg-gray-50 transition"
+                    >
+                      Load More Products
+                    </button>
                   </div>
                 )}
               </>
             )}
-          </div>
+          </main>
         </div>
       </div>
 
-      {/* Mobile Filter Drawer */}
+      {/* MOBILE FILTER MODAL / DRAWER */}
       <AnimatePresence>
         {showMobileFilters && (
           <>
-            <div className="fixed inset-0 bg-black/50 z-50 lg:hidden" onClick={() => setShowMobileFilters(false)} />
-            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} className="fixed right-0 top-0 bottom-0 w-full max-w-sm bg-white z-50 overflow-y-auto p-5">
-              <div className="flex justify-between items-center mb-4"><h3 className="font-bold">Filters</h3><button onClick={() => setShowMobileFilters(false)}><X /></button></div>
-              <div className="space-y-5">
-                <div><label>Category</label><select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)} className="w-full p-2 border rounded">{categories.map(c => <option key={c}>{c}</option>)}</select></div>
-                <div><label>Price Range</label><div className="flex gap-2"><input type="number" placeholder="Min" value={priceRange.min} onChange={e => setPriceRange({ ...priceRange, min: +e.target.value })} className="w-1/2 p-2 border rounded" /><input type="number" placeholder="Max" value={priceRange.max} onChange={e => setPriceRange({ ...priceRange, max: +e.target.value })} className="w-1/2 p-2 border rounded" /></div></div>
-                <div><label>Brand</label>{brands.map(b => (<label key={b} className="flex items-center gap-2"><input type="checkbox" checked={selectedBrands.includes(b)} onChange={e => setSelectedBrands(e.target.checked ? [...selectedBrands, b] : selectedBrands.filter(brand => brand !== b))} />{b}</label>))}</div>
-                <div><label>Location</label><select value={selectedLocation} onChange={e => setSelectedLocation(e.target.value)} className="w-full p-2 border rounded"><option value="">All</option>{locations.map(l => <option key={l}>{l}</option>)}</select></div>
-                <div><label>Max Delivery Days</label><select value={maxDeliveryDays || ''} onChange={e => setMaxDeliveryDays(e.target.value ? +e.target.value : null)} className="w-full p-2 border rounded"><option value="">Any</option><option value="2">Within 2 days</option><option value="5">Within 5 days</option><option value="7">Within 7 days</option></select></div>
-                <div><label>Availability</label><div className="flex gap-2">{(['all','inStock','outOfStock'] as const).map(opt => <button key={opt} onClick={() => setAvailability(opt)} className={`px-3 py-1 rounded-full ${availability === opt ? 'bg-secondary-500 text-white' : 'bg-gray-100'}`}>{opt}</button>)}</div></div>
-                <button onClick={() => { clearFilters(); setShowMobileFilters(false); }} className="w-full bg-secondary-500 text-white py-2 rounded-lg">Apply Filters</button>
+            <div
+              className="fixed inset-0 bg-black/50 z-50 lg:hidden"
+              onClick={() => setShowMobileFilters(false)}
+            />
+            <motion.div
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              className="fixed right-0 top-0 bottom-0 w-full sm:w-80 max-w-full bg-white z-50 overflow-y-auto p-4 sm:p-5 flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex justify-between items-center pb-3 border-b mb-4">
+                  <h3 className="font-bold text-sm text-gray-900">Filters</h3>
+                  <button onClick={() => setShowMobileFilters(false)}>
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="space-y-4 text-xs pb-4">
+                  <div>
+                    <label className="font-bold text-gray-800 block mb-1">Category</label>
+                    <select
+                      value={selectedCategory}
+                      onChange={e => setSelectedCategory(e.target.value)}
+                      className="w-full p-2 border rounded"
+                    >
+                      {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-gray-800 block mb-1">Price Range (₹)</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        placeholder="Min"
+                        value={priceRange.min}
+                        onChange={e => setPriceRange({ ...priceRange, min: +e.target.value })}
+                        className="w-1/2 p-2 border rounded"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Max"
+                        value={priceRange.max}
+                        onChange={e => setPriceRange({ ...priceRange, max: +e.target.value })}
+                        className="w-1/2 p-2 border rounded"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-gray-800 block mb-1">Brand</label>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {brands.map(b => (
+                        <label key={b} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedBrands.includes(b)}
+                            onChange={e => setSelectedBrands(e.target.checked ? [...selectedBrands, b] : selectedBrands.filter(brand => brand !== b))}
+                            className="accent-[#523519]"
+                          />
+                          <span>{b}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t mt-4 flex gap-2">
+                <button
+                  onClick={clearFilters}
+                  className="w-1/2 py-2 border border-gray-300 rounded font-semibold text-gray-700 text-xs"
+                >
+                  Clear All
+                </button>
+                <button
+                  onClick={() => setShowMobileFilters(false)}
+                  className="w-1/2 py-2 bg-[#523519] text-white rounded font-semibold text-xs"
+                >
+                  Apply
+                </button>
               </div>
             </motion.div>
           </>
         )}
       </AnimatePresence>
+
     </div>
   );
 };

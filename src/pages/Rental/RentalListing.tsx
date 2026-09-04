@@ -1,1407 +1,1722 @@
-import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  Filter,
-  Star, 
-  MapPin, 
+import { AnimatePresence, motion } from 'framer-motion';
+
+import {
+  CalendarDays,
   CheckCircle,
-  SlidersHorizontal,
+  ChevronDown,
+  Clock,
+  Heart,
+  MapPin,
+  Menu,
+  Phone,
+  Search,
+  ShieldCheck,
+  ShoppingCart,
+  Star,
   Truck,
-  Wrench,
-  Package,
+  User,
   Users,
   X,
-  ChevronDown,
-  Heart,
-  Loader,
-  Zap} from 'lucide-react';
+} from 'lucide-react';
 
-// ==================== TYPES ====================
+import { toast } from 'react-hot-toast';
 
-interface RentalItem {
+/* ============================================================
+   RENTAL TYPES
+============================================================ */
+
+export interface RentalPrice {
+  daily: number;
+  weekly?: number;
+  monthly?: number;
+}
+
+export interface RentalProvider {
+  id: string;
+  name: string;
+  verified: boolean;
+  rating: number;
+  responseTime: string;
+}
+
+export interface RentalItem {
   id: number;
   name: string;
-  type: 'vehicle' | 'tool' | 'equipment';
   category: string;
-  subcategory?: string;
-  images: string[];
+  subcategory: string;
   description: string;
-  price: {
-    daily: number;
-    weekly?: number;
-    monthly?: number;
-    currency: string;
-    dynamic: boolean;
-    lastUpdated?: string;
-  };
+  image: string;
+  images: string[];
+  location: string;
   stock: number;
-  available: boolean;
-  outOfStock: boolean;
   rating: number;
-  reviews: number;
-  location: string;
-  distance?: number;
-  provider: {
-    id: number;
-    name: string;
-    verified: boolean;
-    rating: number;
-    totalRentals: number;
-    joinedDate: string;
-    responseTime?: string;
-  };
-  specifications: {
-    brand?: string;
-    model?: string;
-    year?: number;
-    capacity?: string;
-    power?: string;
-    fuelType?: string;
-    transmission?: string;
-    dimensions?: string;
-    weight?: string;
-    condition: 'new' | 'like-new' | 'good' | 'fair';
-    warranty?: string;
-    features?: string[];
-  };
-  premium: boolean;
-  performance: number; // 1-10 score
-  wishlisted?: boolean;
-  createdAt: string;
+  reviewCount: number;
+  price: RentalPrice;
+  provider: RentalProvider;
+  deliveryAvailable: boolean;
+  operatorAvailable: boolean;
+  outOfStock?: boolean;
 }
 
+/* ============================================================
+   RENTAL DATA
+============================================================ */
 
-interface FilterState {
-  rentalType: string[];
-  categories: string[];
-  priceRange: {
-    min: number;
-    max: number;
-  };
-  availability: 'all' | 'in-stock' | 'out-of-stock';
-  rating: number;
-  location: string;
-  verified: boolean;
-  premium: boolean;
-}
+const rentalItems: RentalItem[] = [
+  {
+    id: 1,
+    name: 'JCB 3DX Backhoe Loader',
+    category: 'Heavy Equipment',
+    subcategory: 'Backhoe Loader',
+    description:
+      'Reliable JCB backhoe loader suitable for excavation, loading, trenching and construction site work.',
+    image:
+      'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1586864387967-d02ef85d93e8?w=800',
+      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800',
+    ],
+    location: 'Chennai',
+    stock: 4,
+    rating: 4.7,
+    reviewCount: 128,
+    price: {
+      daily: 5000,
+      weekly: 30000,
+      monthly: 95000,
+    },
+    provider: {
+      id: 'rp1',
+      name: 'Sri Construction Equipment',
+      verified: true,
+      rating: 4.8,
+      responseTime: '< 1 Hour',
+    },
+    deliveryAvailable: true,
+    operatorAvailable: true,
+  },
 
-type SortOption = 'relevance' | 'price_asc' | 'price_desc' | 'rating_desc' | 'performance_desc' | 'newest';
+  {
+    id: 2,
+    name: 'Tata Hitachi Excavator',
+    category: 'Heavy Equipment',
+    subcategory: 'Excavator',
+    description:
+      'Powerful hydraulic excavator designed for digging, earthmoving and large construction projects.',
+    image:
+      'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800',
+    ],
+    location: 'Bangalore',
+    stock: 3,
+    rating: 4.6,
+    reviewCount: 96,
+    price: {
+      daily: 7500,
+      weekly: 45000,
+      monthly: 135000,
+    },
+    provider: {
+      id: 'rp2',
+      name: 'BuildMax Rentals',
+      verified: true,
+      rating: 4.7,
+      responseTime: '< 2 Hours',
+    },
+    deliveryAvailable: true,
+    operatorAvailable: true,
+  },
 
-// ==================== CONSTANTS ====================
+  {
+    id: 3,
+    name: 'Tower Crane 10 Ton',
+    category: 'Lifting Equipment',
+    subcategory: 'Tower Crane',
+    description:
+      'Heavy-duty tower crane suitable for high-rise construction and material lifting applications.',
+    image:
+      'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=800',
+    ],
+    location: 'Mumbai',
+    stock: 2,
+    rating: 4.5,
+    reviewCount: 72,
+    price: {
+      daily: 12000,
+      weekly: 70000,
+      monthly: 210000,
+    },
+    provider: {
+      id: 'rp3',
+      name: 'Metro Equipment Rentals',
+      verified: true,
+      rating: 4.6,
+      responseTime: '< 3 Hours',
+    },
+    deliveryAvailable: true,
+    operatorAvailable: true,
+  },
 
-const RENTAL_TYPES = [
-  { id: 'vehicle', label: 'Vehicles', icon: Truck },
-  { id: 'tool', label: 'Tools', icon: Wrench },
-  { id: 'equipment', label: 'Equipment', icon: Package },
+  {
+    id: 4,
+    name: 'Concrete Mixer Machine',
+    category: 'Concrete Equipment',
+    subcategory: 'Concrete Mixer',
+    description:
+      'Portable concrete mixer suitable for residential and commercial construction projects.',
+    image:
+      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1504307651254-35680f356dfd?w=800',
+    ],
+    location: 'Delhi',
+    stock: 8,
+    rating: 4.4,
+    reviewCount: 84,
+    price: {
+      daily: 1800,
+      weekly: 10000,
+      monthly: 28000,
+    },
+    provider: {
+      id: 'rp4',
+      name: 'Capital Construction Rentals',
+      verified: true,
+      rating: 4.5,
+      responseTime: '< 2 Hours',
+    },
+    deliveryAvailable: true,
+    operatorAvailable: false,
+  },
+
+  {
+    id: 5,
+    name: 'Scaffolding Set',
+    category: 'Site Equipment',
+    subcategory: 'Scaffolding',
+    description:
+      'Strong modular scaffolding system for construction, painting and maintenance work.',
+    image:
+      'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1503387762-592deb58ef4e?w=800',
+    ],
+    location: 'Hyderabad',
+    stock: 20,
+    rating: 4.3,
+    reviewCount: 61,
+    price: {
+      daily: 800,
+      weekly: 4500,
+      monthly: 12000,
+    },
+    provider: {
+      id: 'rp5',
+      name: 'SafeSite Rentals',
+      verified: true,
+      rating: 4.4,
+      responseTime: '< 2 Hours',
+    },
+    deliveryAvailable: true,
+    operatorAvailable: false,
+  },
+
+  {
+    id: 6,
+    name: 'Industrial Generator 50 KVA',
+    category: 'Power Equipment',
+    subcategory: 'Generator',
+    description:
+      'Industrial diesel generator providing reliable temporary power for construction sites.',
+    image:
+      'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=800',
+    ],
+    location: 'Pune',
+    stock: 5,
+    rating: 4.6,
+    reviewCount: 112,
+    price: {
+      daily: 2500,
+      weekly: 14000,
+      monthly: 40000,
+    },
+    provider: {
+      id: 'rp6',
+      name: 'PowerRent India',
+      verified: true,
+      rating: 4.7,
+      responseTime: '< 1 Hour',
+    },
+    deliveryAvailable: true,
+    operatorAvailable: false,
+  },
+
+  {
+    id: 7,
+    name: 'Road Roller Machine',
+    category: 'Road Equipment',
+    subcategory: 'Road Roller',
+    description:
+      'Heavy road roller for soil compaction, asphalt compaction and road construction.',
+    image:
+      'https://images.unsplash.com/photo-1590644365607-1c5a0e5c6f72?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1590644365607-1c5a0e5c6f72?w=800',
+    ],
+    location: 'Coimbatore',
+    stock: 2,
+    rating: 4.5,
+    reviewCount: 47,
+    price: {
+      daily: 4500,
+      weekly: 26000,
+      monthly: 75000,
+    },
+    provider: {
+      id: 'rp7',
+      name: 'South India Machinery',
+      verified: true,
+      rating: 4.6,
+      responseTime: '< 2 Hours',
+    },
+    deliveryAvailable: true,
+    operatorAvailable: true,
+  },
+
+  {
+    id: 8,
+    name: 'Power Trowel',
+    category: 'Concrete Equipment',
+    subcategory: 'Power Trowel',
+    description:
+      'Professional power trowel for achieving smooth and durable concrete floor finishes.',
+    image:
+      'https://images.unsplash.com/photo-1590479773265-7464e5d48118?w=800',
+    images: [
+      'https://images.unsplash.com/photo-1590479773265-7464e5d48118?w=800',
+    ],
+    location: 'Kochi',
+    stock: 6,
+    rating: 4.2,
+    reviewCount: 38,
+    price: {
+      daily: 1600,
+      weekly: 9000,
+      monthly: 25000,
+    },
+    provider: {
+      id: 'rp8',
+      name: 'Kerala Tool Rentals',
+      verified: true,
+      rating: 4.3,
+      responseTime: '< 3 Hours',
+    },
+    deliveryAvailable: true,
+    operatorAvailable: false,
+  },
 ];
 
-const VEHICLE_CATEGORIES = [
-  'JCB', 'Truck', 'Tipper', 'Tractor', 'Excavator', 'Loader', 'Crane', 'Forklift',
-  'Compactor', 'Roller', 'Dumper', 'Trailer', 'Pickup', 'Van', 'Bus', 'Car'
-];
 
-const TOOL_CATEGORIES = [
-  'Drill', 'Saw', 'Grinder', 'Welder', 'Compressor', 'Generator', 'Pump', 'Mixer',
-  'Vibrator', 'Jackhammer', 'Measuring', 'Safety', 'Hand Tools', 'Power Tools'
-];
 
-const EQUIPMENT_CATEGORIES = [
-  'Scaffolding', 'Shuttering', 'Prop', 'Beam', 'Column', 'Slab', 'Formwork',
-  'Pans', 'Sheets', 'Plates', 'Pipes', 'Fittings', 'Cables', 'Hoses'
-];
+/* ============================================================
+   RENTAL LISTING PAGE
+============================================================ */
 
-const LOCATIONS = [
-  'Mumbai', 'Delhi', 'Bangalore', 'Chennai', 'Kolkata', 'Pune', 
-  'Ahmedabad', 'Hyderabad', 'Jaipur', 'Lucknow', 'Chandigarh', 'Goa'
-];
+const RentalListing = () => {
+  const navigate = useNavigate();
 
-const PRICE_RANGES = [
-  { label: 'Under ₹1,000', min: 0, max: 1000 },
-  { label: '₹1,000 - ₹5,000', min: 1000, max: 5000 },
-  { label: '₹5,000 - ₹10,000', min: 5000, max: 10000 },
-  { label: '₹10,000 - ₹25,000', min: 10000, max: 25000 },
-  { label: 'Above ₹25,000', min: 25000, max: 1000000 }
-];
+  const [searchText, setSearchText] = useState('');
+  const [selectedCategory, setSelectedCategory] =
+    useState('All');
 
-// ==================== MOCK DATA ====================
+  const [sortOption, setSortOption] =
+    useState('relevance');
 
-const generateMockRentals = (count: number): RentalItem[] => {
-  const types: ('vehicle' | 'tool' | 'equipment')[] = ['vehicle', 'tool', 'equipment'];
-  const vehicleNames = [
-    'JCB 3DX Backhoe Loader', 'Tata 407 Truck', 'Ashok Leyland Tipper', 'Mahindra Tractor',
-    'Hyundai Excavator', 'CAT Wheel Loader', 'L&T Crane 20Ton', 'Godrej Forklift 3Ton',
-    'Bomag Compactor', 'Dynapac Roller', 'Ashok Leyland Dumper', 'Eicher Trailer'
-  ];
-  const toolNames = [
-    'Bosch Rotary Hammer', 'Makita Angle Grinder', 'Hitachi Welding Machine',
-    'Atlas Copco Compressor', 'Kirloskar Generator', 'Koshin Water Pump',
-    'Wacker Neuson Concrete Mixer', 'Chicago Pneumatic Jackhammer', 'Stanley Measuring Tape',
-    '3M Safety Helmet', 'DEWALT Power Drill', 'Hilti Breaker'
-  ];
-  const equipmentNames = [
-    'Cuplock Scaffolding System', 'Acrow Shuttering Props', 'Steel Beams IPE 300',
-    'Concrete Columns Set', 'Slab Formwork Panels', 'Plastic Pans 800x800',
-    'Plywood Sheets 8x4', 'MS Plates 12mm', 'GI Pipes 2 inch', 'Hydraulic Hoses'
-  ];
-  const providerNames = [
-    'XXXX Rentals', 'YYYY Equipment', 'ZZZZ Tools', 'AAAA Machinery',
-    'BBBB Construction', 'CCCC Vehicles', 'DDDD Scaffolding', 'EEEE Power Solutions'
-  ];
-  const locations = LOCATIONS;
-  const images = [
-    'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=500',
-    'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500',
-    'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=500',
-    'https://images.unsplash.com/photo-1581094794329-c8112a89af12?w=500',
-    'https://images.unsplash.com/photo-1589939705384-5185137a7f0f?w=500',
-    'https://images.unsplash.com/photo-1541888946425-d81bb19240f5?w=500'
-  ];
+  const [mobileMenu, setMobileMenu] =
+    useState(false);
 
-  return Array.from({ length: count }, (_, i) => {
-    const type = types[Math.floor(Math.random() * types.length)];
-    const isVehicle = type === 'vehicle';
-    const isTool = type === 'tool';
-    
-    let name = '';
-    let category = '';
-    let subcategory = '';
-    
-    if (isVehicle) {
-      name = vehicleNames[Math.floor(Math.random() * vehicleNames.length)];
-      category = 'Vehicle';
-      subcategory = VEHICLE_CATEGORIES[Math.floor(Math.random() * VEHICLE_CATEGORIES.length)];
-    } else if (isTool) {
-      name = toolNames[Math.floor(Math.random() * toolNames.length)];
-      category = 'Tool';
-      subcategory = TOOL_CATEGORIES[Math.floor(Math.random() * TOOL_CATEGORIES.length)];
-    } else {
-      name = equipmentNames[Math.floor(Math.random() * equipmentNames.length)];
-      category = 'Equipment';
-      subcategory = EQUIPMENT_CATEGORIES[Math.floor(Math.random() * EQUIPMENT_CATEGORIES.length)];
+  const [selectedRental, setSelectedRental] =
+    useState<RentalItem | null>(null);
+
+  const [wishlist, setWishlist] =
+    useState<number[]>([]);
+
+  /* RENTAL FORM */
+
+  const [rentalDays, setRentalDays] =
+    useState(1);
+
+  const [rentalQuantity, setRentalQuantity] =
+    useState(1);
+
+  const [rentalStartDate, setRentalStartDate] =
+    useState('');
+
+  const [deliveryOption, setDeliveryOption] =
+    useState('Pickup');
+
+  const [customerName, setCustomerName] =
+    useState('');
+
+  const [customerPhone, setCustomerPhone] =
+    useState('');
+
+  const [specialInstructions, setSpecialInstructions] =
+    useState('');
+
+  /* ============================================================
+     FILTER
+  ============================================================ */
+
+  const filteredRentals = useMemo(() => {
+    let result = [...rentalItems];
+
+    if (selectedCategory !== 'All') {
+      result = result.filter(
+        (item) =>
+          item.category === selectedCategory
+      );
     }
 
-    const stock = Math.floor(Math.random() * 10);
-    const isPremium = i < 5; // First 5 are premium
-    const performance = 5 + Math.floor(Math.random() * 5); // 5-10
-    const dailyPrice = Math.floor(Math.random() * 20000) + 1000;
-    const rating = 4 + Math.random();
-    const providerRating = 4 + Math.random();
+    if (searchText.trim()) {
+      const search =
+        searchText.toLowerCase();
 
-    return {
-      id: i + 1,
-      name,
-      type,
-      category,
-      subcategory,
-      images: [images[Math.floor(Math.random() * images.length)]],
-      description: `High-quality ${subcategory} for construction and industrial use. Well-maintained and regularly serviced.`,
-      price: {
-        daily: dailyPrice,
-        weekly: dailyPrice * 5,
-        monthly: dailyPrice * 20,
-        currency: '₹',
-        dynamic: Math.random() > 0.7,
-        lastUpdated: new Date().toISOString()
-      },
-      stock,
-      available: stock > 0,
-      outOfStock: stock === 0,
-      rating: parseFloat(rating.toFixed(1)),
-      reviews: Math.floor(Math.random() * 200) + 20,
-      location: locations[Math.floor(Math.random() * locations.length)],
-      distance: Math.floor(Math.random() * 50) + 1,
-      provider: {
-        id: Math.floor(Math.random() * 100) + 1,
-        name: providerNames[Math.floor(Math.random() * providerNames.length)],
-        verified: Math.random() > 0.2,
-        rating: parseFloat(providerRating.toFixed(1)),
-        totalRentals: Math.floor(Math.random() * 500) + 50,
-        joinedDate: `202${Math.floor(Math.random() * 4)}-0${Math.floor(Math.random() * 9) + 1}`,
-        responseTime: `${Math.floor(Math.random() * 6) + 1} hours`
-      },
-      specifications: {
-        brand: ['Bosch', 'Makita', 'CAT', 'JCB', 'Tata', 'Ashok Leyland'][Math.floor(Math.random() * 6)],
-        model: `Model-${Math.floor(Math.random() * 1000)}`,
-        year: 2020 + Math.floor(Math.random() * 4),
-        capacity: `${Math.floor(Math.random() * 20) + 1} ton`,
-        power: `${Math.floor(Math.random() * 100) + 10} HP`,
-        fuelType: ['Diesel', 'Petrol', 'Electric', 'Hybrid'][Math.floor(Math.random() * 4)],
-        transmission: ['Manual', 'Automatic'][Math.floor(Math.random() * 2)],
-        dimensions: `${Math.floor(Math.random() * 10) + 2}x${Math.floor(Math.random() * 5) + 2}x${Math.floor(Math.random() * 3) + 1} m`,
-        weight: `${Math.floor(Math.random() * 5000) + 500} kg`,
-        condition: ['new', 'like-new', 'good', 'fair'][Math.floor(Math.random() * 4)] as any,
-        warranty: Math.random() > 0.5 ? '6 months' : '1 year',
-        features: ['GPS Tracking', 'Insurance Included', 'Maintenance Included', 'Operator Available'].slice(0, Math.floor(Math.random() * 4) + 1)
-      },
-      premium: isPremium,
-      performance,
-      wishlisted: Math.random() > 0.8,
-      createdAt: new Date(Date.now() - Math.floor(Math.random() * 90) * 24 * 60 * 60 * 1000).toISOString()
-    };
-  });
-};
+      result = result.filter(
+        (item) =>
+          item.name
+            .toLowerCase()
+            .includes(search) ||
+          item.category
+            .toLowerCase()
+            .includes(search) ||
+          item.subcategory
+            .toLowerCase()
+            .includes(search) ||
+          item.location
+            .toLowerCase()
+            .includes(search) ||
+          item.provider.name
+            .toLowerCase()
+            .includes(search)
+      );
+    }
 
-// ==================== CUSTOM HOOKS ====================
+    if (sortOption === 'price-low') {
+      result.sort(
+        (a, b) =>
+          a.price.daily -
+          b.price.daily
+      );
+    }
 
-const useWishlist = () => {
-  const [wishlist, setWishlist] = useState<number[]>(() => {
-    const saved = localStorage.getItem('rentalWishlist');
-    return saved ? JSON.parse(saved) : [];
-  });
+    if (sortOption === 'price-high') {
+      result.sort(
+        (a, b) =>
+          b.price.daily -
+          a.price.daily
+      );
+    }
 
-  const toggleWishlist = (id: number) => {
-    setWishlist(prev => {
-      const newList = prev.includes(id)
-        ? prev.filter(item => item !== id)
-        : [...prev, id];
-      localStorage.setItem('rentalWishlist', JSON.stringify(newList));
-      return newList;
-    });
-  };
+    if (sortOption === 'rating') {
+      result.sort(
+        (a, b) =>
+          b.rating - a.rating
+      );
+    }
 
-  const isWishlisted = (id: number) => wishlist.includes(id);
+    return result;
+  }, [
+    searchText,
+    selectedCategory,
+    sortOption,
+  ]);
 
-  return { wishlist, toggleWishlist, isWishlisted };
-};
+  /* ============================================================
+     OPEN RENTAL POPUP
+  ============================================================ */
 
-const useGeolocation = () => {
-  const [location, setLocation] = useState<{
-    lat: number;
-    lng: number;
-    city: string;
-    loading: boolean;
-    error: string | null;
-  }>({
-    lat: 0,
-    lng: 0,
-    city: '',
-    loading: false,
-    error: null
-  });
+  const handleRentNow = (
+    rental: RentalItem
+  ) => {
+    if (
+      rental.outOfStock ||
+      rental.stock <= 0
+    ) {
+      toast.error(
+        'This equipment is currently unavailable'
+      );
 
-  const detectLocation = () => {
-    setLocation(prev => ({ ...prev, loading: true, error: null }));
-
-    if (!navigator.geolocation) {
-      setLocation(prev => ({
-        ...prev,
-        loading: false,
-        error: 'Geolocation is not supported by your browser'
-      }));
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        
-        try {
-          const response = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`
-          );
-          const data = await response.json();
-          const city = data.address.city || data.address.town || data.address.village || 'Unknown';
-          
-          setLocation({
-            lat: latitude,
-            lng: longitude,
-            city,
-            loading: false,
-            error: null
-          });
-        } catch (error) {
-          setLocation({
-            lat: latitude,
-            lng: longitude,
-            city: 'Unknown',
-            loading: false,
-            error: null
-          });
-        }
-      },
-      (error) => {
-        setLocation(prev => ({
-          ...prev,
-          loading: false,
-          error: error.message
-        }));
-      }
-    );
+    setSelectedRental(rental);
+
+    setRentalDays(1);
+    setRentalQuantity(1);
+    setDeliveryOption('Pickup');
+    setCustomerName('');
+    setCustomerPhone('');
+    setSpecialInstructions('');
+
+    const today =
+      new Date()
+        .toISOString()
+        .split('T')[0];
+
+    setRentalStartDate(today);
   };
 
-  return { location, detectLocation };
-};
+  /* ============================================================
+     WISHLIST
+  ============================================================ */
 
-// ==================== COMPONENTS ====================
+  const handleWishlist = (
+    id: number
+  ) => {
+    setWishlist((current) => {
+      if (current.includes(id)) {
+        toast.success(
+          'Removed from wishlist'
+        );
 
-// Location Selector Component
-interface LocationSelectorProps {
-  location: string;
-  setLocation: (loc: string) => void;
-  onAutoDetect: () => void;
-  isDetecting: boolean;
-}
+        return current.filter(
+          (item) => item !== id
+        );
+      }
 
-const LocationSelector = ({ location, setLocation, onAutoDetect, isDetecting }: LocationSelectorProps) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+      toast.success(
+        'Added to wishlist'
+      );
 
-  const filteredLocations = LOCATIONS.filter(loc =>
-    loc.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      return [...current, id];
+    });
+  };
+
+  /* ============================================================
+     CONFIRM RENTAL
+  ============================================================ */
+
+  const handleConfirmRental = () => {
+    if (!selectedRental) {
+      return;
+    }
+
+    if (!customerName.trim()) {
+      toast.error(
+        'Please enter customer name'
+      );
+
+      return;
+    }
+
+    if (!customerPhone.trim()) {
+      toast.error(
+        'Please enter phone number'
+      );
+
+      return;
+    }
+
+    if (
+      customerPhone.replace(
+        /\D/g,
+        ''
+      ).length < 10
+    ) {
+      toast.error(
+        'Please enter a valid phone number'
+      );
+
+      return;
+    }
+
+    if (!rentalStartDate) {
+      toast.error(
+        'Please select rental start date'
+      );
+
+      return;
+    }
+
+    const total =
+      selectedRental.price.daily *
+      rentalDays *
+      rentalQuantity;
+
+    toast.success(
+      `Rental request submitted for ₹${total.toLocaleString()}`
+    );
+
+    setSelectedRental(null);
+  };
+
+  /* ============================================================
+     TOTAL
+  ============================================================ */
+
+  const estimatedTotal =
+    selectedRental
+      ? selectedRental.price.daily *
+        rentalDays *
+        rentalQuantity
+      : 0;
+
+  /* ============================================================
+     TODAY
+  ============================================================ */
+
+  const today = new Date()
+    .toISOString()
+    .split('T')[0];
+
+  /* ============================================================
+     RENDER
+  ============================================================ */
 
   return (
-    <div className="relative">
-      <div className="flex items-center gap-2">
-        <div className="flex-1 relative">
-          <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors text-left flex items-center justify-between"
-          >
-            <span className={location ? 'text-gray-900' : 'text-gray-500'}>
-              {location || 'Select location'}
-            </span>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
-          </button>
-        </div>
-        
-        <button
-          onClick={onAutoDetect}
-          disabled={isDetecting}
-          className="px-3 py-2.5 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors disabled:opacity-50"
-          title="Auto-detect location"
-        >
-          {isDetecting ? (
-            <Loader className="w-4 h-4 animate-spin text-secondary-500" />
-          ) : (
-            <MapPin className="w-4 h-4 text-secondary-500" />
-          )}
-        </button>
-      </div>
+    <div className="min-h-screen bg-[#F5F3EF] text-gray-800">
+
+      {/* ======================================================
+          MOBILE MENU
+      ====================================================== */}
 
       <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-lg shadow-xl"
-          >
-            <div className="p-2">
-              <div className="relative mb-2">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search locations..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500"
-                />
+        {mobileMenu && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() =>
+                setMobileMenu(false)
+              }
+              className="fixed inset-0 z-50 bg-black/50 xl:hidden"
+            />
+
+            <motion.div
+              initial={{
+                x: '-100%',
+              }}
+              animate={{
+                x: 0,
+              }}
+              exit={{
+                x: '-100%',
+              }}
+              className="fixed left-0 top-0 bottom-0 z-[51] w-[min(20rem,88vw)] bg-white shadow-xl xl:hidden overflow-y-auto"
+            >
+
+              <div className="bg-[#3F2413] text-white p-5 flex justify-between items-center">
+
+                <div>
+                  <p className="text-xs text-white/60">
+                    BuildMart
+                  </p>
+
+                  <h2 className="font-bold text-lg">
+                    Rental Categories
+                  </h2>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setMobileMenu(false)
+                  }
+                  className="p-2 rounded-full hover:bg-white/10"
+                >
+                  <X size={22} />
+                </button>
+
               </div>
 
-              <div className="max-h-60 overflow-y-auto">
-                {filteredLocations.length > 0 ? (
-                  filteredLocations.map((loc) => (
-                    <button
-                      key={loc}
-                      onClick={() => {
-                        setLocation(loc);
-                        setIsOpen(false);
-                        setSearchTerm('');
-                      }}
-                      className={`w-full text-left px-3 py-2 text-sm rounded-lg transition-colors ${
-                        location === loc
-                          ? 'bg-secondary-500 text-white'
-                          : 'hover:bg-primary-50 text-gray-700'
-                      }`}
-                    >
-                      {loc}
-                    </button>
-                  ))
-                ) : (
-                  <p className="text-center text-gray-500 py-4 text-sm">No locations found</p>
-                )}
-              </div>
-            </div>
-          </motion.div>
+
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
-    </div>
-  );
-};
 
-// Skeleton Loader Component
-const SkeletonCard = () => (
-  <div className="bg-white rounded-xl overflow-hidden shadow-md animate-pulse">
-    <div className="h-40 sm:h-48 bg-gray-200" />
-    <div className="p-4 space-y-3">
-      <div className="h-4 bg-gray-200 rounded w-3/4" />
-      <div className="flex gap-2">
-        <div className="h-3 bg-gray-200 rounded w-16" />
-        <div className="h-3 bg-gray-200 rounded w-16" />
-      </div>
-      <div className="space-y-2">
-        <div className="h-3 bg-gray-200 rounded w-1/2" />
-        <div className="h-3 bg-gray-200 rounded w-2/3" />
-      </div>
-      <div className="flex justify-between pt-2">
-        <div className="h-4 bg-gray-200 rounded w-20" />
-        <div className="h-4 bg-gray-200 rounded w-20" />
-      </div>
-    </div>
-  </div>
-);
+      {/* ======================================================
+          MAIN CONTENT
+      ====================================================== */}
 
-// Empty State Component
-interface EmptyStateProps {
-  onClear: () => void;
-}
+      <main className="w-full max-w-[1920px] mx-auto px-3 sm:px-5 md:px-6 lg:px-8 xl:px-10 2xl:px-12 py-4 sm:py-6 lg:py-8">
 
-const EmptyState = ({ onClear }: EmptyStateProps) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className="text-center py-12"
-  >
-    <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-      <Package className="w-12 h-12 text-gray-400" />
-    </div>
-    <h3 className="text-lg font-semibold text-gray-900 mb-2">No rentals found</h3>
-    <p className="text-sm text-gray-500 mb-6 max-w-md mx-auto">
-      We couldn't find any rentals matching your criteria. Try adjusting your filters.
-    </p>
-    <button
-      onClick={onClear}
-      className="px-6 py-2 bg-secondary-500 text-white rounded-lg hover:bg-secondary-600 transition-colors"
-    >
-      Clear all filters
-    </button>
-  </motion.div>
-);
+        {/* BREADCRUMB */}
 
-// Mobile Filter Drawer
-interface MobileFilterDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
-  children: React.ReactNode;
-}
+        <div className="flex items-center gap-2 text-xs text-gray-500 mb-5">
 
-const MobileFilterDrawer = ({ isOpen, onClose, children }: MobileFilterDrawerProps) => {
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/50 z-50 lg:hidden"
-          />
-          <motion.div
-            initial={{ x: '100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25 }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-sm bg-white z-50 lg:hidden overflow-y-auto"
+          <button
+            type="button"
+            onClick={() =>
+              navigate(-1)
+            }
+            className="hover:text-[#5A2E12]"
           >
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-              <h3 className="font-semibold text-gray-900">Filters</h3>
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-4">
-              {children}
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-};
+            Home
+          </button>
 
-// Rental Card Component
-interface RentalCardProps {
-  item: RentalItem;
-  onViewDetails: (id: number) => void;
-  onBookNow: (id: number) => void;
-  onWishlist: (id: number) => void;
-  isWishlisted: boolean;
-  index: number;
-}
+          <span>/</span>
 
-const RentalCard = ({ item, onViewDetails, onBookNow, onWishlist, isWishlisted, index }: RentalCardProps) => {
-  const [imageError, setImageError] = useState(false);
- 
-
-  const getConditionColor = (condition: string) => {
-    switch (condition) {
-      case 'new': return 'text-green-600 bg-green-100';
-      case 'like-new': return 'text-emerald-600 bg-emerald-100';
-      case 'good': return 'text-blue-600 bg-blue-100';
-      case 'fair': return 'text-yellow-600 bg-yellow-100';
-      default: return 'text-gray-600 bg-gray-100';
-    }
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.05 }}
-      whileHover={{ y: -5 }}
-      className={`bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all cursor-pointer group relative ${
-        item.premium ? 'ring-2 ring-yellow-400' : ''
-      }`}
-      onClick={() => onViewDetails(item.id)}
-    >
-      {/* Premium Badge */}
-      {item.premium && (
-        <div className="absolute top-3 left-3 z-10">
-          <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white px-2 py-1 rounded-lg flex items-center gap-1 text-xs font-medium shadow-lg">
-            <Zap className="w-3 h-3" />
-            <span>Premium</span>
-          </div>
-        </div>
-      )}
-
-      {/* Image Section */}
-      <div className="relative h-40 sm:h-48 overflow-hidden">
-        {!imageError ? (
-          <img
-            src={item.images[0]}
-            alt={item.name}
-            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-            onError={() => setImageError(true)}
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-            {item.type === 'vehicle' && <Truck className="w-12 h-12 text-gray-400" />}
-            {item.type === 'tool' && <Wrench className="w-12 h-12 text-gray-400" />}
-            {item.type === 'equipment' && <Package className="w-12 h-12 text-gray-400" />}
-          </div>
-        )}
-
-        {/* Out of Stock Overlay */}
-        {item.outOfStock && (
-          <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
-            <span className="bg-red-500 text-white px-3 py-1.5 rounded-full text-xs font-medium">
-              Out of Stock
-            </span>
-          </div>
-        )}
-
-        {/* Verified Badge */}
-        {item.provider.verified && (
-          <div className="absolute top-3 right-3 bg-green-500 text-white px-2 py-1 rounded-lg flex items-center gap-1 text-xs font-medium shadow-lg">
-            <CheckCircle className="w-3 h-3" />
-            <span>Verified</span>
-          </div>
-        )}
-
-        {/* Availability Badge */}
-        {!item.outOfStock && (
-          <div className="absolute bottom-3 left-3">
-            <span className={`px-2 py-1 rounded-lg text-xs font-medium shadow-lg ${
-              item.stock > 3 
-                ? 'bg-green-500 text-white' 
-                : item.stock > 0 
-                  ? 'bg-yellow-500 text-white' 
-                  : 'bg-red-500 text-white'
-            }`}>
-              {item.stock > 3 ? 'In Stock' : item.stock > 0 ? 'Limited Stock' : 'Out of Stock'}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Content Section */}
-      <div className="p-4">
-        {/* Title and Rating */}
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="font-bold text-secondary-500 text-sm sm:text-base line-clamp-1 flex-1">
-            {item.name}
-          </h3>
-          <div className="flex items-center gap-1 ml-2">
-            <Star className="w-3 h-3 sm:w-4 sm:h-4 fill-yellow-400 text-yellow-400" />
-            <span className="text-xs sm:text-sm font-semibold text-secondary-500">{item.rating}</span>
-          </div>
-        </div>
-
-        {/* Category and Subcategory */}
-        <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] sm:text-xs px-2 py-1 bg-primary-50 text-secondary-500 rounded-full">
-            {item.category}
+          <span className="font-semibold text-[#5A2E12]">
+            Rentals
           </span>
-          {item.subcategory && (
-            <span className="text-[10px] sm:text-xs text-gray-500">
-              {item.subcategory}
-            </span>
+
+          {selectedCategory !==
+            'All' && (
+            <>
+              <span>/</span>
+
+              <span>
+                {selectedCategory}
+              </span>
+            </>
           )}
+
         </div>
 
-        {/* Provider Info */}
-        <div className="flex items-center gap-2 mb-2">
-          <div className="flex items-center gap-1 text-xs text-gray-600">
-            <Users className="w-3 h-3" />
-            <span className="truncate max-w-[120px]">{item.provider.name}</span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-gray-500">
-            <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
-            <span>{item.provider.rating}</span>
-          </div>
-          <span className="text-xs text-gray-400">· {item.reviews} reviews</span>
-        </div>
+        {/* PAGE TITLE */}
 
-        {/* Location and Distance */}
-        <div className="flex items-center gap-2 mb-2 text-xs text-gray-600">
-          <MapPin className="w-3 h-3" />
-          <span className="truncate">{item.location}</span>
-          {item.distance && (
-            <span className="text-gray-400">· {item.distance} km</span>
-          )}
-        </div>
+        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 mb-5 sm:mb-6 lg:mb-8">
 
-        {/* Specifications Preview */}
-        <div className="flex flex-wrap gap-1 mb-3">
-          {item.specifications.capacity && (
-            <span className="text-[10px] px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-              {item.specifications.capacity}
-            </span>
-          )}
-          {item.specifications.power && (
-            <span className="text-[10px] px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-              {item.specifications.power}
-            </span>
-          )}
-          {item.specifications.year && (
-            <span className="text-[10px] px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
-              {item.specifications.year}
-            </span>
-          )}
-          <span className={`text-[10px] px-2 py-1 rounded-full ${getConditionColor(item.specifications.condition)}`}>
-            {item.specifications.condition}
-          </span>
-        </div>
-
-        {/* Price and Actions */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-200">
           <div>
-            <span className="text-xs text-gray-500">from</span>
-            <span className="font-bold text-secondary-500 text-sm sm:text-base ml-1">
-              {item.price.currency}{item.price.daily.toLocaleString()}
+
+            <p className="text-sm font-semibold text-[#8A542B]">
+              Construction Equipment Rental
+            </p>
+
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl 2xl:text-5xl font-black text-gray-900 mt-1 leading-tight">
+              Rent Construction Equipment
+            </h1>
+
+            <p className="text-sm text-gray-500 mt-2">
+              Find reliable equipment from
+              verified rental providers.
+            </p>
+
+          </div>
+
+          {/* SORT */}
+
+          <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center gap-2 sm:gap-3 w-full xl:w-auto">
+
+            <span className="text-sm text-gray-500">
+              {filteredRentals.length}{' '}
+              equipment
             </span>
-            <span className="text-xs text-gray-500">/day</span>
-            {item.price.dynamic && (
-              <span className="text-[10px] text-blue-500 ml-2">*Dynamic</span>
+
+            <select
+              value={sortOption}
+              onChange={(event) =>
+                setSortOption(
+                  event.target.value
+                )
+              }
+              className="w-full min-[420px]:w-auto border border-gray-300 bg-white rounded-lg px-3 sm:px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#5A2E12]"
+            >
+              <option value="relevance">
+                Sort: Relevance
+              </option>
+
+              <option value="price-low">
+                Price: Low to High
+              </option>
+
+              <option value="price-high">
+                Price: High to Low
+              </option>
+
+              <option value="rating">
+                Customer Rating
+              </option>
+            </select>
+
+          </div>
+
+        </div>
+
+        {/* RESPONSIVE SEARCH + MOBILE MENU */}
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 mb-4 sm:mb-5">
+          <div className="relative">
+            <Search
+              size={18}
+              className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+            <input
+              type="search"
+              value={searchText}
+              onChange={(event) => setSearchText(event.target.value)}
+              placeholder="Search equipment, category, location or provider..."
+              className="w-full h-11 sm:h-12 bg-white border border-gray-200 rounded-xl pl-10 pr-10 text-sm outline-none focus:border-[#5A2E12] focus:ring-2 focus:ring-[#5A2E12]/10"
+            />
+            {searchText && (
+              <button
+                type="button"
+                onClick={() => setSearchText('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-gray-100"
+                aria-label="Clear search"
+              >
+                <X size={16} />
+              </button>
             )}
           </div>
-          
-          <div className="flex gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onWishlist(item.id);
-              }}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              {isWishlisted ? (
-                <Heart className="w-4 h-4 fill-red-500 text-red-500" />
-              ) : (
-                <Heart className="w-4 h-4 text-gray-400" />
-              )}
-            </button>
-            
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onBookNow(item.id);
-              }}
-              disabled={item.outOfStock}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                item.outOfStock
-                  ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                  : 'bg-secondary-500 text-white hover:bg-secondary-600'
-              }`}
-            >
-              {item.outOfStock ? 'Unavailable' : 'Book Now'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-// Main Component
-const RentalListing = () => {
-  const navigate = useNavigate();
-  const { location: geoLocation, detectLocation } = useGeolocation();
-  const { isWishlisted, toggleWishlist } = useWishlist();
-
-  // State
-  const [rentals, setRentals] = useState<RentalItem[]>([]);
-  const [filteredRentals, setFilteredRentals] = useState<RentalItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
-  const [sortBy, setSortBy] = useState<SortOption>('relevance');
-  
-  const [filters, setFilters] = useState<FilterState>({
-    rentalType: [],
-    categories: [],
-    priceRange: { min: 0, max: 0 },
-    availability: 'all',
-    rating: 0,
-    location: '',
-    verified: false,
-    premium: false
-  });
-
-  // Load data
-  useEffect(() => {
-    const loadRentals = async () => {
-      setLoading(true);
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const data = generateMockRentals(50);
-      setRentals(data);
-      setFilteredRentals(data);
-      setLoading(false);
-    };
-    loadRentals();
-  }, []);
-
-  // Apply filters and sorting
-  useEffect(() => {
-    let filtered = [...rentals];
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.subcategory?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.provider.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Location filter
-    if (selectedLocation) {
-      filtered = filtered.filter(item => item.location === selectedLocation);
-    } else if (geoLocation.city) {
-      filtered = filtered.filter(item => item.location === geoLocation.city);
-    }
-
-    // Rental type filter
-    if (filters.rentalType.length > 0) {
-      filtered = filtered.filter(item => filters.rentalType.includes(item.type));
-    }
-
-    // Categories filter
-    if (filters.categories.length > 0) {
-      filtered = filtered.filter(item => 
-        filters.categories.includes(item.category) || 
-        (item.subcategory && filters.categories.includes(item.subcategory))
-      );
-    }
-
-    // Price range filter
-    if (filters.priceRange.min > 0) {
-      filtered = filtered.filter(item => item.price.daily >= filters.priceRange.min);
-    }
-    if (filters.priceRange.max > 0) {
-      filtered = filtered.filter(item => item.price.daily <= filters.priceRange.max);
-    }
-
-    // Availability filter
-    if (filters.availability === 'in-stock') {
-      filtered = filtered.filter(item => !item.outOfStock);
-    } else if (filters.availability === 'out-of-stock') {
-      filtered = filtered.filter(item => item.outOfStock);
-    }
-
-    // Rating filter
-    if (filters.rating > 0) {
-      filtered = filtered.filter(item => item.rating >= filters.rating);
-    }
-
-    // Verified filter
-    if (filters.verified) {
-      filtered = filtered.filter(item => item.provider.verified);
-    }
-
-    // Premium filter
-    if (filters.premium) {
-      filtered = filtered.filter(item => item.premium);
-    }
-
-    // Sorting
-    switch (sortBy) {
-      case 'price_asc':
-        filtered.sort((a, b) => a.price.daily - b.price.daily);
-        break;
-      case 'price_desc':
-        filtered.sort((a, b) => b.price.daily - a.price.daily);
-        break;
-      case 'rating_desc':
-        filtered.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'performance_desc':
-        filtered.sort((a, b) => b.performance - a.performance);
-        break;
-      case 'newest':
-        filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        break;
-      default:
-        // Relevance - premium first, then by rating
-        filtered.sort((a, b) => {
-          if (a.premium && !b.premium) return -1;
-          if (!a.premium && b.premium) return 1;
-          return b.rating - a.rating;
-        });
-    }
-
-    setFilteredRentals(filtered);
-  }, [rentals, searchTerm, selectedLocation, filters, sortBy, geoLocation]);
-
-  // Handlers
-  const handleViewDetails = (id: number) => {
-    navigate(`/rental/${id}`);
-  };
-
-  const handleBookNow = (id: number) => {
-    navigate(`/rental/${id}/book`);
-  };
-
-  const handleClearFilters = () => {
-    setSearchTerm('');
-    setSelectedLocation('');
-    setFilters({
-      rentalType: [],
-      categories: [],
-      priceRange: { min: 0, max: 0 },
-      availability: 'all',
-      rating: 0,
-      location: '',
-      verified: false,
-      premium: false
-    });
-    setSortBy('relevance');
-  };
-
-  // Calculate statistics
-  const stats = {
-    total: filteredRentals.length,
-    avgPrice: filteredRentals.length > 0
-      ? Math.round(filteredRentals.reduce((sum, item) => sum + item.price.daily, 0) / filteredRentals.length)
-      : 0,
-    avgRating: filteredRentals.length > 0
-      ? parseFloat((filteredRentals.reduce((sum, item) => sum + item.rating, 0) / filteredRentals.length).toFixed(1))
-      : 0
-  };
-
-  // Premium rentals (show at top)
-  const premiumRentals = filteredRentals.filter(item => item.premium);
-  const regularRentals = filteredRentals.filter(item => !item.premium);
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 to-primary-100">
-      {/* Header Section */}
-      <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-4"
-          >
-            <div>
-              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-secondary-500">
-                Find Rental Vehicles and Equipment Near You
-              </h1>
-              <p className="text-sm sm:text-base text-gray-600 mt-1">
-                Vehicles • Tools • Construction Equipment
-              </p>
-            </div>
-
-            {/* Location Selector */}
-            <LocationSelector
-              location={selectedLocation || geoLocation.city}
-              setLocation={setSelectedLocation}
-              onAutoDetect={detectLocation}
-              isDetecting={geoLocation.loading}
-            />
-          </motion.div>
-        </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Search and Filter Bar */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search by name, category, or provider..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500"
-            />
-          </div>
-          
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="hidden lg:flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Filter className="w-4 h-4 text-secondary-500" />
-            <span className="text-sm">Filters</span>
-            <SlidersHorizontal className="w-4 h-4 text-gray-400" />
-          </button>
 
           <button
-            onClick={() => setShowMobileFilters(true)}
-            className="lg:hidden flex items-center justify-center gap-2 px-4 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            type="button"
+            onClick={() => setMobileMenu(true)}
+            className="xl:hidden h-11 sm:h-12 px-4 rounded-xl bg-[#5A2E12] text-white text-sm font-bold flex items-center justify-center gap-2"
           >
-            <Filter className="w-4 h-4 text-secondary-500" />
-            <span className="text-sm">Filters</span>
+            <Menu size={18} />
+            Categories
           </button>
         </div>
 
-        {/* Desktop Filter Panel */}
-        <AnimatePresence>
-          {showFilters && (
+      
+
+        {/* ====================================================
+            RENTAL CARDS
+        ==================================================== */}
+
+        {filteredRentals.length ===
+        0 ? (
+          <div className="bg-white border border-gray-200 rounded-xl p-12 text-center">
+
+            <Search
+              size={42}
+              className="mx-auto text-gray-300"
+            />
+
+            <h3 className="font-bold text-lg mt-4">
+              No rental equipment found
+            </h3>
+
+            <p className="text-sm text-gray-500 mt-1">
+              Try another search or
+              category.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSearchText('');
+                setSelectedCategory(
+                  'All'
+                );
+              }}
+              className="mt-5 bg-[#5A2E12] text-white px-5 py-2.5 rounded-lg text-sm font-bold"
+            >
+              Clear Filters
+            </button>
+
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-5">
+
+            {filteredRentals.map(
+              (rental) => (
+                <RentalCard
+                  key={rental.id}
+                  rental={rental}
+                  isWishlisted={wishlist.includes(
+                    rental.id
+                  )}
+                  onWishlist={() =>
+                    handleWishlist(
+                      rental.id
+                    )
+                  }
+                  onViewDetails={() =>
+                    navigate(
+                      `/rental/${rental.id}`
+                    )
+                  }
+                  onRentNow={() =>
+                    handleRentNow(
+                      rental
+                    )
+                  }
+                />
+              )
+            )}
+
+          </div>
+        )}
+
+      </main>
+
+      {/* ======================================================
+          RENT NOW MODAL
+      ====================================================== */}
+
+      <AnimatePresence>
+        {selectedRental && (
+          <>
+            {/* BACKDROP */}
+
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="hidden lg:block bg-white rounded-xl shadow-lg p-6 mb-6"
+              initial={{
+                opacity: 0,
+              }}
+              animate={{
+                opacity: 1,
+              }}
+              exit={{
+                opacity: 0,
+              }}
+              onClick={() =>
+                setSelectedRental(
+                  null
+                )
+              }
+              className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
+            />
+
+            {/* MODAL */}
+
+            <motion.div
+              initial={{
+                opacity: 0,
+                scale: 0.95,
+                y: 20,
+              }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                y: 0,
+              }}
+              exit={{
+                opacity: 0,
+                scale: 0.95,
+                y: 20,
+              }}
+              transition={{
+                duration: 0.2,
+              }}
+              className="fixed inset-0 z-[101] flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto"
             >
-              <div className="grid grid-cols-4 gap-6">
-                {/* Rental Type */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Rental Type
-                  </label>
-                  <div className="space-y-2">
-                    {RENTAL_TYPES.map((type) => (
-                      <label key={type.id} className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={filters.rentalType.includes(type.id as any)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setFilters({
-                                ...filters,
-                                rentalType: [...filters.rentalType, type.id]
-                              });
-                            } else {
-                              setFilters({
-                                ...filters,
-                                rentalType: filters.rentalType.filter(t => t !== type.id)
-                              });
-                            }
-                          }}
-                          className="w-4 h-4 text-secondary-500 rounded focus:ring-secondary-500"
-                        />
-                        <type.icon className="w-4 h-4 text-gray-400" />
-                        <span className="text-sm text-gray-700">{type.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Categories */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Category
-                  </label>
-                  <select
-                    multiple
-                    value={filters.categories}
-                    onChange={(e) => {
-                      const values = Array.from(e.target.selectedOptions, option => option.value);
-                      setFilters({ ...filters, categories: values });
-                    }}
-                    className="w-full h-32 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500"
-                  >
-                    <optgroup label="Vehicles">
-                      {VEHICLE_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Tools">
-                      {TOOL_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Equipment">
-                      {EQUIPMENT_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </optgroup>
-                  </select>
-                </div>
+              <div
+                onClick={(event) =>
+                  event.stopPropagation()
+                }
+                className="bg-white w-full max-w-3xl max-h-[96vh] sm:max-h-[92vh] overflow-y-auto rounded-xl sm:rounded-2xl shadow-2xl my-1 sm:my-4"
+              >
 
-                {/* Price Range */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Price Range (per day)
-                  </label>
-                  <div className="space-y-2">
-                    {PRICE_RANGES.map((range) => (
-                      <label key={range.label} className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          name="priceRange"
-                          checked={filters.priceRange.min === range.min && filters.priceRange.max === range.max}
-                          onChange={() => setFilters({
-                            ...filters,
-                            priceRange: { min: range.min, max: range.max }
-                          })}
-                          className="w-4 h-4 text-secondary-500 focus:ring-secondary-500"
-                        />
-                        <span className="text-sm text-gray-700">{range.label}</span>
-                      </label>
-                    ))}
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="radio"
-                        name="priceRange"
-                        checked={filters.priceRange.min === 0 && filters.priceRange.max === 0}
-                        onChange={() => setFilters({
-                          ...filters,
-                          priceRange: { min: 0, max: 0 }
-                        })}
-                        className="w-4 h-4 text-secondary-500 focus:ring-secondary-500"
-                      />
-                      <span className="text-sm text-gray-700">Any Price</span>
-                    </label>
-                  </div>
-                </div>
+                {/* MODAL HEADER */}
 
-                {/* Additional Filters */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Availability
-                  </label>
-                  <select
-                    value={filters.availability}
-                    onChange={(e) => setFilters({ ...filters, availability: e.target.value as any })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 mb-4"
-                  >
-                    <option value="all">All Items</option>
-                    <option value="in-stock">In Stock</option>
-                    <option value="out-of-stock">Out of Stock</option>
-                  </select>
+                <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-5 sm:px-6 py-4 flex items-center justify-between">
 
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Minimum Rating
-                  </label>
-                  <select
-                    value={filters.rating}
-                    onChange={(e) => setFilters({ ...filters, rating: Number(e.target.value) })}
-                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500 mb-4"
-                  >
-                    <option value="0">Any Rating</option>
-                    <option value="4.5">4.5+ Stars</option>
-                    <option value="4">4+ Stars</option>
-                    <option value="3.5">3.5+ Stars</option>
-                  </select>
+                  <div>
+                    <p className="text-xs font-bold text-[#8A542B] uppercase tracking-wide">
+                      Rental Booking
+                    </p>
 
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={filters.verified}
-                        onChange={(e) => setFilters({ ...filters, verified: e.target.checked })}
-                        className="w-4 h-4 text-secondary-500 rounded focus:ring-secondary-500"
-                      />
-                      <span className="text-sm text-gray-700">Verified Providers Only</span>
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={filters.premium}
-                        onChange={(e) => setFilters({ ...filters, premium: e.target.checked })}
-                        className="w-4 h-4 text-secondary-500 rounded focus:ring-secondary-500"
-                      />
-                      <span className="text-sm text-gray-700">Premium Items Only</span>
-                    </label>
+                    <h2 className="text-xl font-black text-gray-900">
+                      Rent Now
+                    </h2>
                   </div>
 
                   <button
-                    onClick={handleClearFilters}
-                    className="mt-4 text-sm text-secondary-500 hover:text-primary-600 flex items-center gap-1"
+                    type="button"
+                    onClick={() =>
+                      setSelectedRental(
+                        null
+                      )
+                    }
+                    className="w-10 h-10 rounded-full hover:bg-gray-100 flex items-center justify-center"
                   >
-                    <X className="w-4 h-4" />
-                    Clear all filters
+                    <X size={20} />
                   </button>
+
                 </div>
+
+                <div className="p-3 sm:p-5 lg:p-6">
+
+                  {/* RENTAL SUMMARY */}
+
+                  <div className="bg-[#F5F3EF] border border-[#E8D5B5] rounded-xl p-4 mb-6">
+
+                    <div className="flex flex-col min-[420px]:flex-row gap-3 sm:gap-4">
+
+                      <img
+                        src={
+                          selectedRental
+                            .image
+                        }
+                        alt={
+                          selectedRental
+                            .name
+                        }
+                        className="w-full min-[420px]:w-24 sm:w-28 h-40 min-[420px]:h-24 sm:h-28 rounded-lg object-cover bg-white shrink-0"
+                      />
+
+                      <div className="flex-1 min-w-0">
+
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+
+                          <div>
+
+                            <p className="text-xs text-[#8A542B] font-semibold">
+                              {
+                                selectedRental
+                                  .category
+                              }
+                            </p>
+
+                            <h3 className="font-bold text-lg text-gray-900">
+                              {
+                                selectedRental
+                                  .name
+                              }
+                            </h3>
+
+                            <p className="text-xs text-gray-500 mt-1">
+                              {
+                                selectedRental
+                                  .subcategory
+                              }
+                            </p>
+
+                          </div>
+
+                          {selectedRental
+                            .provider
+                            .verified && (
+                            <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-bold w-fit">
+                              <CheckCircle
+                                size={12}
+                              />
+                              Verified
+                            </span>
+                          )}
+
+                        </div>
+
+                        <div className="flex flex-wrap gap-3 mt-3 text-xs text-gray-600">
+
+                          <span className="flex items-center gap-1">
+                            <MapPin
+                              size={13}
+                            />
+                            {
+                              selectedRental.location
+                            }
+                          </span>
+
+                          <span className="flex items-center gap-1">
+                            <Star
+                              size={13}
+                              className="fill-[#E8B34B] text-[#E8B34B]"
+                            />
+                            {
+                              selectedRental.rating
+                            }
+                          </span>
+
+                          <span>
+                            {
+                              selectedRental
+                                .provider
+                                .name
+                            }
+                          </span>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  {/* CUSTOMER FORM */}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
+
+                    {/* NAME */}
+
+                    <FormField label="Customer Name">
+
+                      <div className="relative">
+
+                        <User
+                          size={17}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        />
+
+                        <input
+                          type="text"
+                          value={
+                            customerName
+                          }
+                          onChange={(event) =>
+                            setCustomerName(
+                              event.target
+                                .value
+                            )
+                          }
+                          placeholder="Enter your name"
+                          className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-sm outline-none focus:border-[#5A2E12]"
+                        />
+
+                      </div>
+
+                    </FormField>
+
+                    {/* PHONE */}
+
+                    <FormField label="Phone Number">
+
+                      <div className="relative">
+
+                        <Phone
+                          size={17}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        />
+
+                        <input
+                          type="tel"
+                          value={
+                            customerPhone
+                          }
+                          onChange={(event) =>
+                            setCustomerPhone(
+                              event.target
+                                .value
+                            )
+                          }
+                          placeholder="Enter phone number"
+                          className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-sm outline-none focus:border-[#5A2E12]"
+                        />
+
+                      </div>
+
+                    </FormField>
+
+                    {/* START DATE */}
+
+                    <FormField label="Rental Start Date">
+
+                      <div className="relative">
+
+                        <CalendarDays
+                          size={17}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        />
+
+                        <input
+                          type="date"
+                          value={
+                            rentalStartDate
+                          }
+                          min={today}
+                          onChange={(event) =>
+                            setRentalStartDate(
+                              event.target
+                                .value
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-sm outline-none focus:border-[#5A2E12]"
+                        />
+
+                      </div>
+
+                    </FormField>
+
+                    {/* DURATION */}
+
+                    <FormField label="Rental Duration">
+
+                      <div className="relative">
+
+                        <Clock
+                          size={17}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                        />
+
+                        <select
+                          value={
+                            rentalDays
+                          }
+                          onChange={(event) =>
+                            setRentalDays(
+                              Number(
+                                event.target
+                                  .value
+                              )
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-sm outline-none appearance-none focus:border-[#5A2E12]"
+                        >
+                          <option value={1}>
+                            1 Day
+                          </option>
+
+                          <option value={2}>
+                            2 Days
+                          </option>
+
+                          <option value={3}>
+                            3 Days
+                          </option>
+
+                          <option value={5}>
+                            5 Days
+                          </option>
+
+                          <option value={7}>
+                            1 Week
+                          </option>
+
+                          <option value={15}>
+                            15 Days
+                          </option>
+
+                          <option value={30}>
+                            1 Month
+                          </option>
+                        </select>
+
+                        <ChevronDown
+                          size={15}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"
+                        />
+
+                      </div>
+
+                    </FormField>
+
+                    {/* QUANTITY */}
+
+                    <FormField label="Quantity">
+
+                      <div className="relative">
+
+                        <Users
+                          size={17}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        />
+
+                        <select
+                          value={
+                            rentalQuantity
+                          }
+                          onChange={(event) =>
+                            setRentalQuantity(
+                              Number(
+                                event.target
+                                  .value
+                              )
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-sm outline-none appearance-none focus:border-[#5A2E12]"
+                        >
+                          {Array.from(
+                            {
+                              length:
+                                Math.min(
+                                  selectedRental.stock,
+                                  10
+                                ),
+                            },
+                            (
+                              _,
+                              index
+                            ) => (
+                              <option
+                                key={
+                                  index +
+                                  1
+                                }
+                                value={
+                                  index +
+                                  1
+                                }
+                              >
+                                {index + 1}
+                              </option>
+                            )
+                          )}
+                        </select>
+
+                        <ChevronDown
+                          size={15}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"
+                        />
+
+                      </div>
+
+                    </FormField>
+
+                    {/* DELIVERY */}
+
+                    <FormField label="Delivery Option">
+
+                      <div className="relative">
+
+                        <Truck
+                          size={17}
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        />
+
+                        <select
+                          value={
+                            deliveryOption
+                          }
+                          onChange={(event) =>
+                            setDeliveryOption(
+                              event.target
+                                .value
+                            )
+                          }
+                          className="w-full border border-gray-200 rounded-lg pl-10 pr-4 py-3 text-sm outline-none appearance-none focus:border-[#5A2E12]"
+                        >
+                          <option value="Pickup">
+                            Pickup from Provider
+                          </option>
+
+                          {selectedRental.deliveryAvailable && (
+                            <option value="Delivery">
+                              Delivery to Site
+                            </option>
+                          )}
+
+                          {selectedRental
+                            .operatorAvailable && (
+                            <option value="Delivery + Operator">
+                              Delivery + Operator
+                            </option>
+                          )}
+                        </select>
+
+                        <ChevronDown
+                          size={15}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400"
+                        />
+
+                      </div>
+
+                    </FormField>
+
+                  </div>
+
+                  {/* SPECIAL INSTRUCTIONS */}
+
+                  <div className="mt-5">
+
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Special Instructions
+                    </label>
+
+                    <textarea
+                      value={
+                        specialInstructions
+                      }
+                      onChange={(event) =>
+                        setSpecialInstructions(
+                          event.target
+                            .value
+                        )
+                      }
+                      rows={3}
+                      placeholder="Enter site location, delivery instructions, operator requirements..."
+                      className="w-full border border-gray-200 rounded-lg px-4 py-3 text-sm outline-none resize-none focus:border-[#5A2E12]"
+                    />
+
+                  </div>
+
+                  {/* PRICE SUMMARY */}
+
+                  <div className="mt-6 bg-[#FDF9F3] border border-[#E8D5B5] rounded-xl p-5">
+
+                    <div className="flex items-center justify-between mb-4">
+
+                      <h3 className="font-bold text-gray-900">
+                        Rental Summary
+                      </h3>
+
+                      <ShieldCheck
+                        size={20}
+                        className="text-[#5A2E12]"
+                      />
+
+                    </div>
+
+                    <div className="space-y-3 text-sm">
+
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">
+                          Daily rental
+                        </span>
+
+                        <span className="font-semibold">
+                          ₹
+                          {selectedRental.price.daily.toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">
+                          Duration
+                        </span>
+
+                        <span className="font-semibold">
+                          {rentalDays}{' '}
+                          {rentalDays ===
+                          1
+                            ? 'Day'
+                            : 'Days'}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">
+                          Quantity
+                        </span>
+
+                        <span className="font-semibold">
+                          {rentalQuantity}
+                        </span>
+                      </div>
+
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">
+                          Delivery
+                        </span>
+
+                        <span className="font-semibold">
+                          {
+                            deliveryOption
+                          }
+                        </span>
+                      </div>
+
+                      <div className="border-t border-[#E8D5B5] pt-4 mt-4 flex items-center justify-between">
+
+                        <span className="font-bold text-gray-900">
+                          Estimated Total
+                        </span>
+
+                        <span className="text-2xl font-black text-[#5A2E12]">
+                          ₹
+                          {estimatedTotal.toLocaleString()}
+                        </span>
+
+                      </div>
+
+                    </div>
+
+                    <p className="text-[11px] text-gray-500 mt-3">
+                      Final amount may vary
+                      based on delivery,
+                      operator and site
+                      requirements.
+                    </p>
+
+                  </div>
+
+                  {/* BUTTONS */}
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5 sm:mt-6">
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSelectedRental(
+                          null
+                        )
+                      }
+                      className="flex-1 border border-gray-300 text-gray-700 py-3.5 rounded-lg font-bold hover:bg-gray-50 transition"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={
+                        handleConfirmRental
+                      }
+                      className="flex-1 bg-[#5A2E12] hover:bg-[#3F2413] text-white py-3.5 rounded-lg font-bold transition"
+                    >
+                      Confirm Rental
+                    </button>
+
+                  </div>
+
+                </div>
+
               </div>
+
             </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Summary and Sort */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
-          <div className="text-sm text-gray-600">
-            <span className="font-semibold text-secondary-500">{stats.total}</span> rentals found
-            {stats.total > 0 && (
-              <span className="text-gray-500 ml-2">
-                · Avg. ₹{stats.avgPrice.toLocaleString()}/day · ⭐ {stats.avgRating}
-              </span>
-            )}
-          </div>
-
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="w-full sm:w-auto px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500"
-          >
-            <option value="relevance">Sort by: Relevance</option>
-            <option value="price_asc">Price: Low to High</option>
-            <option value="price_desc">Price: High to Low</option>
-            <option value="rating_desc">Rating: High to Low</option>
-            <option value="performance_desc">Performance: High to Low</option>
-            <option value="newest">Newest First</option>
-          </select>
-        </div>
-
-        {/* Rental Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-              <SkeletonCard key={n} />
-            ))}
-          </div>
-        ) : filteredRentals.length === 0 ? (
-          <EmptyState onClear={handleClearFilters} />
-        ) : (
-          <>
-            {/* Premium Rentals */}
-            {premiumRentals.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Zap className="w-5 h-5 text-yellow-500" />
-                  Premium Rentals
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                  {premiumRentals.map((item, index) => (
-                    <RentalCard
-                      key={item.id}
-                      item={item}
-                      onViewDetails={handleViewDetails}
-                      onBookNow={handleBookNow}
-                      onWishlist={toggleWishlist}
-                      isWishlisted={isWishlisted(item.id)}
-                      index={index}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Regular Rentals */}
-            {regularRentals.length > 0 && (
-              <div>
-                {premiumRentals.length > 0 && (
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">All Rentals</h2>
-                )}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                  {regularRentals.map((item, index) => (
-                    <RentalCard
-                      key={item.id}
-                      item={item}
-                      onViewDetails={handleViewDetails}
-                      onBookNow={handleBookNow}
-                      onWishlist={toggleWishlist}
-                      isWishlisted={isWishlisted(item.id)}
-                      index={index}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
           </>
         )}
+      </AnimatePresence>
+
+    </div>
+  );
+};
+
+/* ============================================================
+   FORM FIELD
+============================================================ */
+
+const FormField = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => {
+  return (
+    <div>
+
+      <label className="block text-sm font-semibold text-gray-700 mb-2">
+        {label}
+      </label>
+
+      {children}
+
+    </div>
+  );
+};
+
+/* ============================================================
+   RENTAL CARD
+============================================================ */
+
+const RentalCard = ({
+  rental,
+  isWishlisted,
+  onWishlist,
+  onViewDetails,
+  onRentNow,
+}: {
+  rental: RentalItem;
+  isWishlisted: boolean;
+  onWishlist: () => void;
+  onViewDetails: () => void;
+  onRentNow: () => void;
+}) => {
+  return (
+    <motion.div
+      whileHover={{
+        y: -3,
+      }}
+      className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-lg transition-shadow"
+    >
+
+      {/* IMAGE */}
+
+      <div className="relative h-44 min-[480px]:h-48 sm:h-52 lg:h-56 2xl:h-60 bg-[#F8F5F0] flex items-center justify-center overflow-hidden">
+
+        <img
+          src={rental.image}
+          alt={rental.name}
+          className="w-full h-full object-cover"
+        />
+
+        {/* CATEGORY */}
+
+        <span className="absolute top-3 left-3 bg-[#5A2E12] text-white text-[10px] font-bold px-2.5 py-1 rounded-md">
+          {rental.category}
+        </span>
+
+        {/* WISHLIST */}
+
+        <button
+          type="button"
+          onClick={(
+            event
+          ) => {
+            event.stopPropagation();
+            onWishlist();
+          }}
+          className="absolute top-3 right-3 w-9 h-9 bg-white rounded-full shadow-md flex items-center justify-center"
+        >
+          <Heart
+            size={18}
+            className={
+              isWishlisted
+                ? 'fill-red-500 text-red-500'
+                : 'text-gray-600'
+            }
+          />
+        </button>
+
       </div>
 
-      {/* Mobile Filter Drawer */}
-      <MobileFilterDrawer isOpen={showMobileFilters} onClose={() => setShowMobileFilters(false)}>
-        <div className="space-y-6">
-          {/* Rental Type */}
-          <div>
-            <h3 className="font-medium text-gray-900 mb-3">Rental Type</h3>
-            <div className="space-y-2">
-              {RENTAL_TYPES.map((type) => (
-                <label key={type.id} className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={filters.rentalType.includes(type.id as any)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setFilters({
-                          ...filters,
-                          rentalType: [...filters.rentalType, type.id]
-                        });
-                      } else {
-                        setFilters({
-                          ...filters,
-                          rentalType: filters.rentalType.filter(t => t !== type.id)
-                        });
-                      }
-                    }}
-                    className="w-4 h-4 text-secondary-500 rounded focus:ring-secondary-500"
-                  />
-                  <type.icon className="w-4 h-4 text-gray-400" />
-                  <span className="text-sm text-gray-700">{type.label}</span>
-                </label>
-              ))}
-            </div>
-          </div>
+      {/* CONTENT */}
 
-          {/* Categories */}
-          <div>
-            <h3 className="font-medium text-gray-900 mb-3">Category</h3>
-            <select
-              multiple
-              value={filters.categories}
-              onChange={(e) => {
-                const values = Array.from(e.target.selectedOptions, option => option.value);
-                setFilters({ ...filters, categories: values });
-              }}
-              className="w-full h-40 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500"
-            >
-              <optgroup label="Vehicles">
-                {VEHICLE_CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Tools">
-                {TOOL_CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </optgroup>
-              <optgroup label="Equipment">
-                {EQUIPMENT_CATEGORIES.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-                ))}
-              </optgroup>
-            </select>
-          </div>
+      <div className="p-3 sm:p-4">
 
-          {/* Price Range */}
-          <div>
-            <h3 className="font-medium text-gray-900 mb-3">Price Range (per day)</h3>
-            <div className="space-y-2">
-              {PRICE_RANGES.map((range) => (
-                <label key={range.label} className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="mobilePriceRange"
-                    checked={filters.priceRange.min === range.min && filters.priceRange.max === range.max}
-                    onChange={() => setFilters({
-                      ...filters,
-                      priceRange: { min: range.min, max: range.max }
-                    })}
-                    className="w-4 h-4 text-secondary-500 focus:ring-secondary-500"
-                  />
-                  <span className="text-sm text-gray-700">{range.label}</span>
-                </label>
-              ))}
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  name="mobilePriceRange"
-                  checked={filters.priceRange.min === 0 && filters.priceRange.max === 0}
-                  onChange={() => setFilters({
-                    ...filters,
-                    priceRange: { min: 0, max: 0 }
-                  })}
-                  className="w-4 h-4 text-secondary-500 focus:ring-secondary-500"
-                />
-                <span className="text-sm text-gray-700">Any Price</span>
-              </label>
-            </div>
-          </div>
+        {/* SUBCATEGORY */}
 
-          {/* Availability */}
-          <div>
-            <h3 className="font-medium text-gray-900 mb-3">Availability</h3>
-            <select
-              value={filters.availability}
-              onChange={(e) => setFilters({ ...filters, availability: e.target.value as any })}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500"
-            >
-              <option value="all">All Items</option>
-              <option value="in-stock">In Stock</option>
-              <option value="out-of-stock">Out of Stock</option>
-            </select>
-          </div>
+        <p className="text-xs font-semibold text-[#8A542B]">
+          {rental.subcategory}
+        </p>
 
-          {/* Rating */}
-          <div>
-            <h3 className="font-medium text-gray-900 mb-3">Minimum Rating</h3>
-            <select
-              value={filters.rating}
-              onChange={(e) => setFilters({ ...filters, rating: Number(e.target.value) })}
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-secondary-500"
-            >
-              <option value="0">Any Rating</option>
-              <option value="4.5">4.5+ Stars</option>
-              <option value="4">4+ Stars</option>
-              <option value="3.5">3.5+ Stars</option>
-            </select>
-          </div>
+        {/* NAME */}
 
-          {/* Additional Filters */}
-          <div className="space-y-2">
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={filters.verified}
-                onChange={(e) => setFilters({ ...filters, verified: e.target.checked })}
-                className="w-4 h-4 text-secondary-500 rounded focus:ring-secondary-500"
-              />
-              <span className="text-sm text-gray-700">Verified Providers Only</span>
-            </label>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                checked={filters.premium}
-                onChange={(e) => setFilters({ ...filters, premium: e.target.checked })}
-                className="w-4 h-4 text-secondary-500 rounded focus:ring-secondary-500"
-              />
-              <span className="text-sm text-gray-700">Premium Items Only</span>
-            </label>
-          </div>
+        <h3 className="font-bold text-gray-900 text-sm sm:text-base mt-1 line-clamp-2 min-h-[40px] sm:min-h-[48px]">
+          {rental.name}
+        </h3>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={handleClearFilters}
-              className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Clear All
-            </button>
-            <button
-              onClick={() => setShowMobileFilters(false)}
-              className="flex-1 px-4 py-2 bg-secondary-500 text-white rounded-lg text-sm font-medium hover:bg-secondary-600 transition-colors"
-            >
-              Apply Filters
-            </button>
-          </div>
+        {/* RATING */}
+
+        <div className="flex items-center gap-2 mt-2">
+
+          <span className="flex items-center gap-1 bg-[#5A2E12] text-white text-[10px] px-2 py-1 rounded-md font-bold">
+            {rental.rating}
+            <Star
+              size={9}
+              className="fill-[#E8B34B] text-[#E8B34B]"
+            />
+          </span>
+
+          <span className="text-xs text-gray-500">
+            {rental.reviewCount}{' '}
+            reviews
+          </span>
+
         </div>
-      </MobileFilterDrawer>
-    </div>
+
+        {/* LOCATION */}
+
+        <div className="flex items-center gap-1 text-xs text-gray-500 mt-3">
+
+          <MapPin size={13} />
+
+          <span>
+            {rental.location}
+          </span>
+
+        </div>
+
+        {/* PROVIDER */}
+
+        <div className="flex items-center gap-1 text-xs text-gray-500 mt-2">
+
+          <CheckCircle
+            size={13}
+            className="text-green-600"
+          />
+
+          <span className="truncate">
+            {rental.provider.name}
+          </span>
+
+        </div>
+
+        {/* PRICE */}
+
+        <div className="mt-4">
+
+          <div className="flex items-baseline gap-1">
+
+            <span className="text-xl sm:text-2xl font-black text-gray-900">
+              ₹
+              {rental.price.daily.toLocaleString()}
+            </span>
+
+            <span className="text-xs text-gray-500">
+              / day
+            </span>
+
+          </div>
+
+          {rental.price.weekly && (
+            <p className="text-[11px] text-gray-500 mt-1">
+              Weekly from ₹
+              {rental.price.weekly.toLocaleString()}
+            </p>
+          )}
+
+        </div>
+
+        {/* AVAILABILITY */}
+
+        <div className="mt-3 flex items-center gap-2">
+
+          <span
+            className={`w-2 h-2 rounded-full ${
+              rental.stock > 0
+                ? 'bg-green-500'
+                : 'bg-red-500'
+            }`}
+          />
+
+          <span
+            className={`text-xs font-semibold ${
+              rental.stock > 0
+                ? 'text-green-600'
+                : 'text-red-600'
+            }`}
+          >
+            {rental.stock > 0
+              ? `${rental.stock} available`
+              : 'Currently unavailable'}
+          </span>
+
+        </div>
+
+        {/* FEATURES */}
+
+        <div className="flex flex-wrap gap-2 mt-3">
+
+          {rental.deliveryAvailable && (
+            <span className="text-[10px] bg-gray-100 px-2 py-1 rounded">
+              Delivery
+            </span>
+          )}
+
+          {rental.operatorAvailable && (
+            <span className="text-[10px] bg-gray-100 px-2 py-1 rounded">
+              Operator
+            </span>
+          )}
+
+        </div>
+
+        {/* ACTIONS */}
+
+        <div className="grid grid-cols-2 gap-2 mt-4">
+
+          <button
+            type="button"
+            onClick={onViewDetails}
+            className="flex-1 border border-[#5A2E12] text-[#5A2E12] py-2.5 rounded-lg text-xs font-bold hover:bg-[#F5EBDD] transition"
+          >
+            View Details
+          </button>
+
+          <button
+            type="button"
+            onClick={onRentNow}
+            disabled={
+              rental.stock <= 0
+            }
+            className="flex-1 bg-[#5A2E12] hover:bg-[#3F2413] disabled:bg-gray-400 text-white py-2.5 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1"
+          >
+            <ShoppingCart
+              size={14}
+            />
+
+            Rent Now
+          </button>
+
+        </div>
+
+      </div>
+
+    </motion.div>
   );
 };
 
